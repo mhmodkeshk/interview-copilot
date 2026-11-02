@@ -1,4 +1,4 @@
-﻿const CACHE = 'interview-copilot-v7';
+﻿const CACHE = 'interview-copilot-v8';
 const ASSETS = ['./index.html', './manifest.webmanifest', './icon.svg'];
 const AUDIO = ['./demo-vorstellung.mp3'];
 

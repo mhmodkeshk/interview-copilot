@@ -64,8 +64,8 @@
   .side{grid-column:1;grid-row:1}
   .main{grid-column:2;grid-row:1}
   .side,.main{direction:rtl}
-  /* منع أي محتوى داخلي (زي شريط الفلاتر) إنه يوسّع الصفحة ويقطع الباقي */
-  .body,.side,.main,.side-tools,.filters,.qlist,.qgrid,.side-foot,.frame,.answrap{
+  /* منع أي محتوى داخلي إنه يوسّع الصفحة ويقطع الباقي */
+  .body,.side,.main,.side-tools,.qlist,.qgrid,.side-foot,.frame,.answrap{
     min-width:0;max-width:100%
   }
 
@@ -85,14 +85,6 @@
     background:linear-gradient(180deg,#1f9e7c,#14795f);border:1px solid #2bb58c;
     color:#eafff9;border-radius:11px;padding:0 14px;font-size:13px;white-space:nowrap;font-weight:600
   }
-  .filters{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 10px;scrollbar-width:none}
-  .filters::-webkit-scrollbar{display:none}
-  .fchip{
-    flex:0 0 auto;font-size:11.5px;padding:5px 10px;border-radius:999px;
-    background:#0b131b;border:1px solid var(--line);color:#9db0c3
-  }
-  .fchip.on{background:rgba(45,212,167,.14);border-color:rgba(45,212,167,.45);color:var(--acc)}
-
   .qlist{flex:1;min-height:0;overflow-y:auto;padding:2px 10px 12px}
   .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:9px;align-content:start}
   .tile{
@@ -143,7 +135,7 @@
     border:1px solid #223142;border-radius:18px;
     box-shadow:0 18px 50px rgba(0,0,0,.30)
   }
-  .answrap{flex:1;min-height:0;overflow-y:auto;padding:20px 22px 34px}
+  .answrap{flex:1;min-height:0;overflow-y:auto;padding:20px 22px 34px;touch-action:pan-y}
 
   .anshead{display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--line)}
   .qblock{flex:1;min-width:0}
@@ -322,8 +314,21 @@
     background:linear-gradient(180deg,#14b78a,#0e906f);border-color:#12a37f;color:#fff;
     box-shadow:0 4px 14px rgba(14,155,116,.24)
   }
-  .fchip{background:#fff;border-color:var(--line);color:#5d7388}
-  .fchip.on{background:rgba(14,155,116,.10);border-color:rgba(14,155,116,.40);color:var(--acc)}
+  .zoomgroup{display:flex;align-items:center;gap:4px;margin-inline-start:auto}
+  .zoomgroup .mini{padding:6px 9px}
+  .zoombadge{
+    min-width:46px;font-size:11.5px;padding:6px 6px;border-radius:9px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+    font-weight:700;text-align:center
+  }
+  .fsbadge{
+    position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));
+    transform:translate(-50%,10px);background:var(--panel);border:1px solid var(--line);
+    color:var(--txt);padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;
+    box-shadow:0 8px 24px rgba(10,30,50,.16);z-index:95;
+    opacity:0;pointer-events:none;transition:opacity .15s,transform .15s
+  }
+  .fsbadge.show{opacity:1;transform:translate(-50%,0)}
 
   .tile{
     background:linear-gradient(165deg,#ffffff,#f6f9fc);
@@ -462,7 +467,6 @@
       </div>
       <button class="addbtn" id="addBtn">+ سؤال</button>
     </div>
-    <div class="filters" id="filters"></div>
     <div class="qlist" id="qlist"></div>
     <div class="side-foot">
       <button class="sofbtn sos" id="sosBtn">🆘 جمل الإنقاذ</button>
@@ -481,6 +485,7 @@
 
 <input type="file" id="audioInput" accept="audio/*" class="hidden">
 <input type="file" id="importInput" accept=".json,application/json" class="hidden">
+<div class="fsbadge" id="fsBadge">100%</div>
 
 <!-- ================= EDIT MODAL ================= -->
 <div class="overlay hidden" id="overlay"></div>
@@ -698,7 +703,9 @@
   };
   try{
     var p = JSON.parse(localStorage.getItem(PREF) || "{}");
-    S.practice = !!p.practice; S.fs = p.fs || 18; S.stars = p.stars || [];
+    S.practice = !!p.practice;
+    S.fs = Math.max(9, Math.min(48, p.fs || 18));
+    S.stars = p.stars || [];
     localStorage.setItem(PREF, JSON.stringify({practice:S.practice, fs:S.fs, stars:S.stars}));
   }catch(e){}
   function savePref(){
@@ -751,31 +758,60 @@
     if (b < 1048576) return Math.round(b/1024) + " KB";
     return (b/1048576).toFixed(1) + " MB";
   }
+  /* ---- حجم الإجابة: تصغير/تكبير بالإصبعين أو بزراير A− / A+ ---- */
+  var BASE_FS = 18, MIN_FS = 9, MAX_FS = 48;
+  function fsPct(){ return Math.round(S.fs / BASE_FS * 100); }
   function applyFs(){ document.documentElement.style.setProperty("--fs", S.fs + "px"); }
+  var fsTimer = null;
+  function showFsBadge(){
+    var b = $("#fsBadge"); if (!b) return;
+    b.textContent = fsPct() + "%";
+    b.classList.add("show");
+    clearTimeout(fsTimer);
+    fsTimer = setTimeout(function(){ b.classList.remove("show"); }, 900);
+  }
+  function setAnsFs(v, persist){
+    var nf = Math.max(MIN_FS, Math.min(MAX_FS, Math.round(v)));
+    if (nf !== S.fs){
+      S.fs = nf;
+      applyFs();
+      var zb = document.querySelector(".zoombadge");
+      if (zb) zb.textContent = fsPct() + "%";
+    }
+    if (persist) savePref();
+    showFsBadge();
+  }
+  function stepFs(d){ setAnsFs(S.fs + d, true); }
+  /* يختار أكبر حجم خط يخلي الإجابة كلها تبان من غير سكرول */
+  function fitAnswerToScreen(){
+    var wrap = $("#answerWrap");
+    var txt = wrap ? wrap.querySelector(".txt") : null;
+    if (!txt) return;
+    var root = document.documentElement;
+    var lo = MIN_FS, hi = Math.max(BASE_FS * 2, S.fs), best = MIN_FS;
+    root.style.setProperty("--fs", MIN_FS + "px");
+    for (var i = 0; i < 6; i++){
+      var mid = Math.round((lo + hi) / 2);
+      root.style.setProperty("--fs", mid + "px");
+      if (wrap.scrollHeight <= wrap.clientHeight + 1){ best = mid; lo = mid; }
+      else hi = mid - 1;
+      if (lo > hi) break;
+    }
+    root.style.setProperty("--fs", S.fs + "px");
+    setAnsFs(best, true);
+    if (wrap.scrollHeight > wrap.clientHeight + 1) toast("الإجابة طويلة — صغّر أكتر بصوبعين");
+  }
   applyFs();
 
   /* ============================================================
      SIDEBAR
      ============================================================ */
-  function renderFilters(){
-    var f = $("#filters"); f.innerHTML = "";
-    function mk(id, label){
-      var b = el("button","fchip"+(S.filter===id?" on":""),label);
-      b.onclick = function(){ S.filter = id; renderFilters(); renderList(); };
-      f.appendChild(b);
-    }
-    mk("all","الكل");
-    mk("star","★ المثبتة");
-    CATS.forEach(function(c){ mk(c.id, c.label); });
-  }
 
   function renderList(){
     var box = $("#qlist"); box.innerHTML = "";
     var terms = norm(S.q).split(" ").filter(Boolean);
 
     var items = DB.questions.filter(function(q){
-      if (S.filter === "star" && S.stars.indexOf(q.id) === -1) return false;
-      if (S.filter !== "all" && S.filter !== "star" && q.cat !== S.filter) return false;
       if (!terms.length) return true;
       var h = norm([q.q_ar,q.q_de,q.kurz,q.lang,q.ar,(q.tags||[]).join(" ")].join(" "));
       return terms.every(function(t){ return h.indexOf(t) !== -1; });
@@ -929,13 +965,26 @@
     /* ---- player ---- */
     wrap.appendChild(buildPlayer(q));
 
-    /* ---- tabs ---- */
+    /* ---- tabs + zoom ---- */
     var tabs = el("div","tabs");
     [["lang","الإجابة"],["ar","المعنى بالعربي"]].forEach(function(t){
       var b = el("button","tab"+(currentTab===t[0]?" on":""), t[1]);
       b.onclick = function(){ currentTab = t[0]; renderAnswer(); };
       tabs.appendChild(b);
     });
+
+    var zg = el("div","zoomgroup");
+    var zf = el("button","mini","⤢"); zf.title = "اعرض أكبر قدر من الإجابة في الشاشة";
+    zf.onclick = function(){ fitAnswerToScreen(); };
+    var zm = el("button","mini","A−"); zm.title = "تصغير الإجابة";
+    zm.onclick = function(){ stepFs(-2); };
+    var zz = el("button","zoombadge", fsPct()+"%"); zz.title = "إرجاع الحجم 100%";
+    zz.onclick = function(){ setAnsFs(BASE_FS, true); renderAnswer(); };
+    var zp = el("button","mini","A+"); zp.title = "تكبير الإجابة";
+    zp.onclick = function(){ stepFs(2); };
+    zg.appendChild(zf); zg.appendChild(zm); zg.appendChild(zz); zg.appendChild(zp);
+    tabs.appendChild(zg);
+
     wrap.appendChild(tabs);
 
     /* ---- content ---- */
@@ -1312,7 +1361,7 @@
         Promise.all(tasks).then(function(){
           loadedFor = null;
           S.id = DB.questions[0] ? DB.questions[0].id : null;
-          renderFilters(); renderList(); renderAnswer();
+          renderList(); renderAnswer();
           toast("اتحمّلت ✓");
         });
       }catch(err){ toast("الملف مش صالح"); }
@@ -1324,14 +1373,47 @@
   /* ============================================================
      PREF BTNS
      ============================================================ */
-  $("#fontUp").onclick   = function(){ if (S.fs<28){ S.fs++; applyFs(); savePref(); } };
-  $("#fontDown").onclick = function(){ if (S.fs>13){ S.fs--; applyFs(); savePref(); } };
+  $("#fontUp").onclick   = function(){ stepFs(1); };
+  $("#fontDown").onclick = function(){ stepFs(-1); };
   $("#practiceBtn").onclick = function(){
     S.practice = !S.practice; savePref();
     $("#practiceBtn").classList.toggle("on", S.practice);
     renderAnswer();
   };
   $("#practiceBtn").classList.toggle("on", S.practice);
+
+  /* ---- تصغير/تكبير الإجابة بصوبعين (pinch) جوه برواز الإجابة ---- */
+  (function(){
+    var wrap = $("#answerWrap");
+    if (!wrap) return;
+    var startDist = 0, startFs = S.fs, active = false;
+    function dist(t){
+      var dx = t[0].clientX - t[1].clientX;
+      var dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy) || 0;
+    }
+    wrap.addEventListener("touchstart", function(e){
+      if (e.touches.length === 2){
+        active = true;
+        startDist = dist(e.touches);
+        startFs = S.fs;
+      }
+    }, { passive: true });
+    wrap.addEventListener("touchmove", function(e){
+      if (!active || e.touches.length < 2 || !startDist) return;
+      if (e.cancelable) e.preventDefault();
+      var d = dist(e.touches);
+      if (d > 0) setAnsFs(startFs * (d / startDist), false);
+    }, { passive: false });
+    function endPinch(e){
+      if (e.touches && e.touches.length >= 2) return;
+      if (!active) return;
+      active = false; startDist = 0;
+      savePref();
+    }
+    wrap.addEventListener("touchend", endPinch, { passive: true });
+    wrap.addEventListener("touchcancel", endPinch, { passive: true });
+  })();
 
   $("#search").addEventListener("input", function(e){
     S.q = e.target.value;
@@ -1365,7 +1447,6 @@
      BOOT
      ============================================================ */
   $("#sub").textContent = DB.questions.length + " سؤال · " + DB.phrases.length + " جملة إنقاذ";
-  renderFilters();
   renderList();
 
   var firstId = null;
