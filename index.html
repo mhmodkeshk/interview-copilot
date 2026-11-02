@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f8fb">
+<title>Interview Copilot — Keshk</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#070b10; --panel:#0d141c; --panel2:#111b25; --line:#1d2a38;
+    --txt:#eaf1f8; --muted:#8ba0b5; --acc:#2dd4a7; --acc-d:#12a37d;
+    --gold:#f5c451; --red:#ff6b6b; --fs:18px; --r:14px;
+    --side:392px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--txt);
+    font-family:"Segoe UI",system-ui,-apple-system,Tahoma,"Noto Naskh Arabic",sans-serif;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#22303e;border-radius:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------------- topbar ---------------- */
+  .topbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:9px 14px;padding-top:calc(9px + env(safe-area-inset-top));
+    border-bottom:1px solid var(--line);background:rgba(9,14,20,.92);
+    backdrop-filter:blur(10px);z-index:30;
+  }
+  .logo{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+  .logo .ic{
+    width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+    background:linear-gradient(160deg,#1b3a35,#0f1c22);border:1px solid #244a41;
+    display:grid;place-items:center;font-size:17px
+  }
+  .logo b{font-size:14.5px;letter-spacing:.2px;display:block;line-height:1.15}
+  .logo small{font-size:10.5px;color:var(--muted)}
+  .tbtns{display:flex;gap:6px;align-items:center}
+  .tbtn{
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:7px 11px;font-size:13px;color:#c3d2e1;min-width:36px;height:36px;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px
+  }
+  .tbtn.on{background:rgba(45,212,167,.14);border-color:rgba(45,212,167,.45);color:var(--acc)}
+  .tbtn:active{transform:scale(.97)}
+
+  /* ---------------- layout ---------------- */
+  /* القايمة على الشمال، والإجابة على اليمين جوه البرواز */
+  .body{
+    flex:1;min-height:0;display:grid;direction:ltr;
+    grid-template-columns:var(--side) 1fr
+  }
+  .side{grid-column:1;grid-row:1}
+  .main{grid-column:2;grid-row:1}
+  .side,.main{direction:rtl}
+
+  /* ---------------- sidebar ---------------- */
+  .side{
+    min-height:0;display:flex;flex-direction:column;
+    border-right:1px solid var(--line);background:var(--panel);
+  }
+  .side-tools{padding:12px 12px 8px;display:flex;gap:8px}
+  .searchbox{position:relative;flex:1}
+  .searchbox input{
+    width:100%;padding:11px 13px;border-radius:11px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--txt);outline:none;font-size:13.5px
+  }
+  .searchbox input:focus{border-color:rgba(45,212,167,.5)}
+  .addbtn{
+    background:linear-gradient(180deg,#1f9e7c,#14795f);border:1px solid #2bb58c;
+    color:#eafff9;border-radius:11px;padding:0 14px;font-size:13px;white-space:nowrap;font-weight:600
+  }
+  .filters{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 10px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .fchip{
+    flex:0 0 auto;font-size:11.5px;padding:5px 10px;border-radius:999px;
+    background:#0b131b;border:1px solid var(--line);color:#9db0c3
+  }
+  .fchip.on{background:rgba(45,212,167,.14);border-color:rgba(45,212,167,.45);color:var(--acc)}
+
+  .qlist{flex:1;min-height:0;overflow-y:auto;padding:2px 10px 12px}
+  .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:9px;align-content:start}
+  .tile{
+    position:relative;aspect-ratio:1/1;border-radius:14px;
+    background:linear-gradient(165deg,#101b25,#0a1219);
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:14px 8px;font-size:12px;line-height:1.35;font-weight:600;color:#d3e0ec;
+    transition:border-color .12s,background .12s
+  }
+  .tile:hover{border-color:#2b4055;background:linear-gradient(165deg,#13212d,#0b141c)}
+  .tile.on{
+    border-color:rgba(45,212,167,.55);
+    background:linear-gradient(165deg,#0f2a25,#0a1a17);color:#eafff9;
+    box-shadow:inset 0 0 0 2px rgba(45,212,167,.12)
+  }
+  .tile:active{transform:scale(.97)}
+  .tile .tx{width:100%;max-height:100%;overflow:hidden}
+  .tile .de{
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+    text-align:center;font-size:11px;line-height:1.28;font-weight:700;color:#dceaf5
+  }
+  .tile .de[dir="ltr"]{direction:ltr}
+  .tile .ar{
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-size:9.5px;line-height:1.4;color:#6f8296;margin-top:4px;font-weight:400
+  }
+  .tile .num{position:absolute;top:5px;inset-inline-start:7px;font-size:9px;color:#5c7083;font-weight:400}
+  .tile .spk{position:absolute;top:4px;inset-inline-end:6px;font-size:10px;opacity:.25}
+  .tile.has-audio .spk{opacity:1;color:var(--acc)}
+  .tile .st{position:absolute;bottom:4px;inset-inline-end:6px;font-size:10px;color:var(--gold)}
+
+  .side-foot{
+    flex:0 0 auto;border-top:1px solid var(--line);padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+    display:flex;gap:7px;align-items:center
+  }
+  .sofbtn{
+    flex:1;font-size:11.5px;padding:8px 6px;border-radius:10px;
+    background:#0b131b;border:1px solid var(--line);color:#9db0c3;text-align:center
+  }
+  .sofbtn.sos{color:#ffc9c9;border-color:rgba(255,107,107,.35);background:rgba(255,107,107,.08)}
+
+  /* ---------------- main / answer ---------------- */
+  .main{min-height:0;padding:14px;display:flex;overflow:hidden}
+  .frame{
+    flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:linear-gradient(180deg,#0a1219,#080e14);
+    border:1px solid #223142;border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,.30)
+  }
+  .answrap{flex:1;min-height:0;overflow-y:auto;padding:20px 22px 34px}
+
+  .anshead{display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .qblock{flex:1;min-width:0}
+  .qblock .qde{font-size:21px;font-weight:700;line-height:1.35}
+  .qblock .qde[dir="ltr"]{direction:ltr;text-align:left}
+  .qblock .qar{font-size:13.5px;color:var(--muted);margin-top:6px}
+  .qacts{display:flex;gap:7px;flex:0 0 auto;align-items:center}
+  .ibtn{
+    width:38px;height:38px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);
+    display:grid;place-items:center;font-size:15px;color:#b9c9d8
+  }
+  .ibtn:active{transform:scale(.96)}
+  .ibtn.gold{color:var(--gold);border-color:rgba(245,196,81,.4)}
+
+  /* speaker */
+  .player{
+    display:flex;align-items:center;gap:13px;margin:16px 0 4px;padding:12px 14px;
+    background:linear-gradient(180deg,#0f1a22,#0b141b);border:1px solid var(--line);border-radius:14px
+  }
+  .speaker{
+    width:56px;height:56px;flex:0 0 auto;border-radius:50%;
+    background:linear-gradient(180deg,#2fd8a9,#12a37d);color:#04231a;
+    display:grid;place-items:center;font-size:23px;border:1px solid #45e6b8;
+    box-shadow:0 8px 22px rgba(24,180,140,.25);transition:transform .1s
+  }
+  .speaker:active{transform:scale(.95)}
+  .speaker.playing{animation:pulse 1.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,212,167,.45)}70%{box-shadow:0 0 0 14px rgba(45,212,167,0)}100%{box-shadow:0 0 0 0 rgba(45,212,167,0)}}
+  .pl-meta{flex:1;min-width:0}
+  .pl-meta b{font-size:13.5px;display:block}
+  .pl-meta small{font-size:11px;color:var(--muted);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar{height:4px;background:#16232f;border-radius:4px;margin-top:8px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:var(--acc);border-radius:4px;transition:width .2s linear}
+  .pl-extra{display:flex;gap:6px;flex:0 0 auto}
+  .mini{
+    font-size:11.5px;padding:7px 10px;border-radius:9px;background:#0a121a;
+    border:1px solid var(--line);color:#a5b7c8;white-space:nowrap
+  }
+  .mini:active{background:var(--panel2)}
+  .mini.danger{color:#ffb3b3;border-color:rgba(255,107,107,.3)}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:16px 0 12px;flex-wrap:wrap}
+  .tab{
+    padding:8px 15px;border-radius:10px;font-size:12.5px;
+    background:var(--panel);border:1px solid var(--line);color:#9db0c3
+  }
+  .tab.on{background:rgba(45,212,167,.13);border-color:rgba(45,212,167,.45);color:var(--acc)}
+
+  .txt{font-size:var(--fs);line-height:1.85;white-space:pre-wrap;word-wrap:break-word}
+  .txt.de{direction:ltr;text-align:left;line-height:1.8}
+  .txt.ar{color:#cfdfee;line-height:2}
+  .sec{margin-bottom:10px}
+  .lbl{
+    font-size:11px;color:#6f8499;margin-bottom:8px;display:flex;align-items:center;gap:8px
+  }
+  .lbl::after{content:"";height:1px;flex:1;background:var(--line)}
+  .reveal{
+    width:100%;margin-top:12px;padding:13px;border-radius:12px;font-size:13px;
+    background:rgba(245,196,81,.09);border:1px dashed rgba(245,196,81,.4);color:var(--gold)
+  }
+  .blurred .txt{filter:blur(7px);pointer-events:none}
+  .draftbox{
+    margin-top:12px;padding:10px 12px;border-radius:10px;font-size:12px;
+    background:rgba(201,154,91,.08);border:1px solid rgba(201,154,91,.28);color:#d8ab6f
+  }
+  .navrow{display:flex;gap:8px;margin-top:26px}
+  .navrow button{
+    flex:1;padding:13px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
+    color:#b9c9d8;font-size:13px
+  }
+  .navrow button:disabled{opacity:.3}
+
+  .placeholder{
+    padding:70px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:2
+  }
+  .placeholder .big{font-size:40px;display:block;margin-bottom:12px;opacity:.5}
+
+  /* ---------------- modal ---------------- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:70;backdrop-filter:blur(3px)}
+  .modal{
+    position:fixed;z-index:71;inset:0;display:flex;align-items:flex-end;justify-content:center;
+    padding:0
+  }
+  .sheet{
+    background:var(--panel);width:100%;max-width:760px;max-height:93vh;
+    border:1px solid var(--line);border-radius:18px 18px 0 0;
+    display:flex;flex-direction:column;overflow:hidden;
+    animation:up .18s ease-out
+  }
+  @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+  .sheet-head{
+    display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);
+    padding-top:calc(12px + env(safe-area-inset-top))
+  }
+  .sheet-head b{font-size:14.5px;flex:1}
+  .sheet-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:13px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:11.5px;color:#93a7bb}
+  .field input[type=text],.field textarea,.field select{
+    background:#0a121a;border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px;color:var(--txt);outline:none;width:100%
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:rgba(45,212,167,.5)}
+  .field textarea{resize:vertical;line-height:1.7}
+  .field .hint{font-size:10.5px;color:#66798c}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#b7c7d6}
+  .chk input{width:16px;height:16px;accent-color:#2dd4a7}
+  .audio-zone{
+    border:1px dashed #26384a;border-radius:12px;padding:13px;display:flex;
+    align-items:center;gap:11px;background:#0a121a
+  }
+  .audio-zone .az-ic{font-size:20px}
+  .audio-zone .az-tx{flex:1;min-width:0}
+  .audio-zone .az-tx b{font-size:12.5px;display:block}
+  .audio-zone .az-tx small{font-size:10.5px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sheet-foot{
+    display:flex;gap:9px;padding:12px 16px;border-top:1px solid var(--line);
+    padding-bottom:calc(12px + env(safe-area-inset-bottom));background:var(--panel)
+  }
+  .btn{
+    padding:12px 16px;border-radius:11px;font-size:13.5px;font-weight:600;
+    background:var(--panel2);border:1px solid var(--line);color:#c3d2e1;flex:1
+  }
+  .btn.primary{background:linear-gradient(180deg,#25b98f,#128668);border-color:#31d3a5;color:#03231a}
+  .btn.danger{flex:0 0 auto;color:#ffb3b3;border-color:rgba(255,107,107,.35);background:rgba(255,107,107,.08)}
+
+  /* ---------------- phrases panel ---------------- */
+  .ppanel{position:fixed;inset:0;z-index:72;background:var(--bg);display:flex;flex-direction:column}
+  .phead{
+    display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+    padding-top:calc(11px + env(safe-area-inset-top))
+  }
+  .phead b{flex:1;font-size:14px}
+  .pbody{overflow-y:auto;padding:14px;max-width:860px;width:100%;margin:0 auto;padding-bottom:60px}
+  .pgroup{font-size:11.5px;color:#7c90a4;margin:16px 0 8px}
+  .prow{
+    background:linear-gradient(180deg,#0f1a22,#0b141b);border:1px solid var(--line);
+    border-radius:13px;padding:12px 14px;margin-bottom:9px
+  }
+  .prow .de{font-size:17px;direction:ltr;text-align:left;line-height:1.5}
+  .prow .ar{font-size:12.5px;color:var(--muted);margin-top:5px}
+  .prow .pr{display:flex;gap:6px;margin-top:9px}
+
+  .toast{
+    position:fixed;bottom:24px;inset-inline:0;margin:auto;width:max-content;max-width:90%;
+    background:#16232f;border:1px solid var(--line);color:#d7e4f0;padding:10px 16px;
+    border-radius:11px;font-size:13px;z-index:90;opacity:0;transform:translateY(10px);
+    transition:.18s;pointer-events:none
+  }
+  .toast.show{opacity:1;transform:none}
+
+  /* ============================================================
+     LIGHT THEME (نسخة فاتحة) — بتعكس الثيم الغامق
+     ============================================================ */
+  :root{
+    --bg:#f4f8fb; --panel:#ffffff; --panel2:#eef4f9;
+    --line:#d9e4ef; --txt:#0f1c28; --muted:#63798f;
+    --acc:#0e9b74; --acc-d:#0a7c5c; --gold:#b07d10; --red:#d94a4a;
+  }
+  body{
+    background:radial-gradient(1100px 520px at 50% -260px,#e6f3ef 0%,#f4f8fb 65%);
+    color:var(--txt);
+  }
+  .topbar{background:rgba(255,255,255,.92);border-bottom-color:var(--line)}
+  .logo .ic{background:linear-gradient(160deg,#e6f9f2,#f6fdfa);border-color:#bce7da}
+  .logo small{color:var(--muted)}
+  .tbtn{background:#fff;border-color:var(--line);color:#41576d}
+  .tbtn.on{background:rgba(14,155,116,.10);border-color:rgba(14,155,116,.40);color:var(--acc)}
+
+  .side{background:var(--panel);border-right-color:var(--line)}
+  .searchbox input{background:#f7fafd;border-color:var(--line);color:var(--txt)}
+  .searchbox input::placeholder{color:#8fa2b5}
+  .addbtn{
+    background:linear-gradient(180deg,#14b78a,#0e906f);border-color:#12a37f;color:#fff;
+    box-shadow:0 4px 14px rgba(14,155,116,.24)
+  }
+  .fchip{background:#fff;border-color:var(--line);color:#5d7388}
+  .fchip.on{background:rgba(14,155,116,.10);border-color:rgba(14,155,116,.40);color:var(--acc)}
+
+  .tile{
+    background:linear-gradient(165deg,#ffffff,#f6f9fc);
+    border-color:#dde7f0;color:#16283a;
+    box-shadow:0 1px 2px rgba(20,40,60,.04)
+  }
+  .tile:hover{border-color:#b9cfe2;background:linear-gradient(165deg,#ffffff,#eff6fc)}
+  .tile.on{
+    border-color:#4fd2ae;background:linear-gradient(165deg,#e9fbf4,#f5fdf9);color:#065f46;
+    box-shadow:inset 0 0 0 2px rgba(14,155,116,.12)
+  }
+  .tile .num{color:#9aacbd}
+  .tile .de{color:#152839}
+  .tile .ar{color:#75899d}
+  .tile.on .de{color:#075e45}
+
+  .sofbtn{background:#fff;border-color:var(--line);color:#5d7388}
+  .sofbtn.sos{background:#fff5f5;border-color:#f3c9c9;color:#c23b3b}
+
+  .main{background:transparent}
+  .frame{
+    background:linear-gradient(180deg,#ffffff,#f8fbfe);
+    border-color:#dde7f0;
+    box-shadow:0 16px 44px rgba(22,48,72,.10)
+  }
+  .qblock .qar{color:var(--muted)}
+  .ibtn{background:#fff;border-color:var(--line);color:#41576d}
+  .ibtn.gold{color:var(--gold);border-color:#e8d3a2;background:#fffaef}
+
+  .player{background:linear-gradient(180deg,#f7fbfe,#eff6fb);border-color:var(--line)}
+  .speaker{
+    background:linear-gradient(180deg,#17c398,#0e9b74);color:#ffffff;border-color:#19b98f;
+    box-shadow:0 8px 20px rgba(14,155,116,.28)
+  }
+  .bar{background:#e0eaf3}
+  .mini{background:#fff;border-color:var(--line);color:#4d637a}
+  .mini.danger{color:#c23b3b;border-color:#f3cfcf;background:#fff7f7}
+
+  .tab{background:#fff;border-color:var(--line);color:#5d7388}
+  .tab.on{background:rgba(14,155,116,.10);border-color:rgba(14,155,116,.40);color:var(--acc)}
+  .lbl{color:#6b8095}
+  .txt.ar{color:#31465b}
+  .reveal{background:#fffbf0;border-color:#e8d3a2;color:var(--gold)}
+  .draftbox{background:#fffaf2;border-color:#eedcb8;color:#8a621f}
+  .navrow button{background:#fff;border-color:var(--line);color:#4d637a}
+
+  .overlay{background:rgba(18,32,45,.38)}
+  .sheet{background:#fff}
+  .sheet-head{border-bottom-color:var(--line)}
+  .field label{color:#61788e}
+  .field input[type=text],.field textarea,.field select{
+    background:#f8fbfd;border-color:#d9e4ef;color:var(--txt)
+  }
+  .chk{color:#41576d}
+  .audio-zone{background:#f8fbfd;border-color:#c8d9e8}
+  .btn{background:#eef4f9;border-color:var(--line);color:#3b5166}
+  .btn.primary{background:linear-gradient(180deg,#14b78a,#0e906f);border-color:#12a37f;color:#fff}
+  .btn.danger{background:#fff6f6;border-color:#f2caca;color:#c23b3b}
+
+  .phead{background:rgba(255,255,255,.94);border-bottom-color:var(--line)}
+  .pgroup{color:#6b8095}
+  .prow{background:linear-gradient(180deg,#fff,#f7fafd);border-color:var(--line)}
+  .prow .ar{color:var(--muted)}
+
+  .toast{background:#10202e;color:#eaf1f8;border-color:#10202e}
+  ::-webkit-scrollbar-thumb{background:#c6d5e3}
+  .placeholder{color:var(--muted)}
+  .hidden{display:none !important}
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width:860px){
+    :root{--side:100%}
+    .body{grid-template-columns:1fr}
+    .main{grid-column:1}
+    .side{grid-column:1}
+    .side{border:0}
+    .main{display:none;padding:8px}
+    body.answering .side{display:none}
+    body.answering .main{display:flex}
+    .answrap{padding:14px 14px 26px}
+    .qgrid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+    .tile{font-size:11.5px;padding:12px 6px}
+    .qblock .qde{font-size:18.5px}
+    .two{grid-template-columns:1fr}
+    .player{padding:11px}
+    .speaker{width:52px;height:52px;font-size:21px}
+    .logo small{display:none}
+  }
+  @media (min-width:861px){
+    .sheet{border-radius:18px;margin:24px}
+    .modal{align-items:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= TOPBAR ================= -->
+<div class="topbar">
+  <div class="logo">
+    <div class="ic">🎧</div>
+    <div>
+      <b>Interview Copilot</b>
+      <small id="sub">تحضير إنترفيوهات الشركات الألمانية</small>
+    </div>
+  </div>
+  <div class="tbtns">
+    <button class="tbtn" id="fontDown" title="تصغير الخط">A−</button>
+    <button class="tbtn" id="fontUp" title="تكبير الخط">A+</button>
+    <button class="tbtn" id="practiceBtn" title="وضع التدريب">تدريب</button>
+  </div>
+</div>
+
+<!-- ================= BODY ================= -->
+<div class="body">
+
+  <!-- sidebar -->
+  <aside class="side">
+    <div class="side-tools">
+      <div class="searchbox">
+        <input id="search" type="search" placeholder="ابحث… عربي أو ألماني" autocomplete="off">
+      </div>
+      <button class="addbtn" id="addBtn">+ سؤال</button>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="qlist" id="qlist"></div>
+    <div class="side-foot">
+      <button class="sofbtn sos" id="sosBtn">🆘 جمل الإنقاذ</button>
+      <button class="sofbtn" id="backupBtn">💾 نسخة</button>
+      <button class="sofbtn" id="importBtn">⇪ استيراد</button>
+    </div>
+  </aside>
+
+  <!-- answer -->
+  <main class="main">
+    <div class="frame">
+      <div class="answrap" id="answerWrap"></div>
+    </div>
+  </main>
+</div>
+
+<input type="file" id="audioInput" accept="audio/*" class="hidden">
+<input type="file" id="importInput" accept=".json,application/json" class="hidden">
+
+<!-- ================= EDIT MODAL ================= -->
+<div class="overlay hidden" id="overlay"></div>
+<div class="modal hidden" id="modal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <b id="modalTitle">تعديل السؤال</b>
+      <button class="ibtn" id="modalClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="two">
+        <div class="field">
+          <label>السؤال بالألماني (اللي هيظهر على المربع)</label>
+          <input type="text" id="f_qde" dir="ltr" placeholder="Stellen Sie sich bitte kurz vor.">
+        </div>
+        <div class="field">
+          <label>السؤال بالعربي (توضيح تحته)</label>
+          <input type="text" id="f_qar" placeholder="مثال: عرّف عن نفسك">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>الإجابة المختصرة (اللي هتقرأها في المكالمة)</label>
+        <textarea id="f_kurz" rows="5" dir="auto"></textarea>
+        <div class="hint">خليها 3–5 جمل عشان تقدر تقراها بسرعة.</div>
+      </div>
+
+      <div class="field">
+        <label>النص الكامل (اختياري)</label>
+        <textarea id="f_lang" rows="5" dir="auto"></textarea>
+      </div>
+
+      <div class="field">
+        <label>المعنى بالعربي (اختياري)</label>
+        <textarea id="f_ar" rows="3" dir="auto"></textarea>
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label>التصنيف</label>
+          <select id="f_cat"></select>
+        </div>
+        <div class="field">
+          <label>ترتيب السؤال</label>
+          <div style="display:flex;gap:8px">
+            <button class="mini" id="moveUp" style="flex:1">↑ فوق</button>
+            <button class="mini" id="moveDown" style="flex:1">↓ تحت</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:18px;margin-top:2px">
+        <label class="chk"><input type="checkbox" id="f_hot"> سؤال متكرر</label>
+        <label class="chk"><input type="checkbox" id="f_draft"> مسودة (محتاجة مراجعة)</label>
+      </div>
+
+      <div class="audio-zone">
+        <div class="az-ic">🔊</div>
+        <div class="az-tx">
+          <b>صوت الإجابة</b>
+          <small id="audioName">لا يوجد صوت — ارفع ملف MP3 / M4A / WAV</small>
+        </div>
+        <button class="mini" id="pickAudio">رفع</button>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="mini" id="testAudio" style="flex:1">▶ تجربة الصوت</button>
+        <button class="mini danger" id="removeAudio">حذف الصوت</button>
+      </div>
+    </div>
+
+    <div class="sheet-foot">
+      <button class="btn danger hidden" id="deleteBtn">حذف</button>
+      <button class="btn" id="cancelBtn">إلغاء</button>
+      <button class="btn primary" id="saveBtn">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PHRASES ================= -->
+<div class="ppanel hidden" id="phrases">
+  <div class="phead">
+    <b>🆘 جمل الإنقاذ</b>
+    <button class="ibtn" id="phBack">✕</button>
+  </div>
+  <div class="pbody" id="pBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>const SEED = {"meta":{"title":"Interview Copilot","subtitle":"محمود كشك · تحضير إنترفيوهات الشركات الألمانية","updated":"2026-11-02"},"categories":[{"id":"personal","label":"تعريف وشخصي"},{"id":"experience","label":"خبرة وإنجاز"},{"id":"motivation","label":"دوافع والشركة"},{"id":"service","label":"خدمة العملاء"},{"id":"behavior","label":"سلوكي ومواقف"},{"id":"language","label":"اللغة الألمانية"},{"id":"future","label":"مستقبل وختام"}],"questions":[{"id":"vorstellung","cat":"personal","hot":true,"q_ar":"عرّف عن نفسك","q_de":"Stellen Sie sich bitte kurz vor.","tags":["تعريف","مقدمة","اسم","خبرة","Vorstellung"],"audio":{"name":"WhatsApp Audio 2026-10-23 at 11.31.53 PM.mpeg","size":1379376,"type":"audio/mpeg","src":"WhatsApp Audio 2026-10-23 at 11.31.53 PM.mpeg"},"kurz":"Mein Name ist Mahmoud Nasr, ich bin 39 Jahre alt, verheiratet und habe zwei Töchter. Ich habe über neun Jahre Erfahrung im Kundenservice – zuerst bei Vodafone Ägypten, wo ich später Teamleiter wurde, und seit zwei Jahren bei Concentrix im deutschsprachigen Kundenservice. Dort habe ich mein Deutsch bis B2 ausgebaut und arbeite täglich mit deutschen Kunden. Jetzt suche ich eine neue Herausforderung bei einem deutschen Unternehmen, wo ich meine Erfahrung und meine Sprachkenntnisse langfristig einbringen kann.","ar":"اسمي محمود نصر، 39 سنة، متزوج وعندي بنتين. خبرة أكتر من 9 سنين في خدمة العملاء: بدأت في فودافون مصر وبعدها بقيت قائد فريق، وحاليًا في Concentrix في خدمة عملاء باللغة الألمانية ومستواي B2. بدور على تحدٍّ جديد في شركة ألمانية أستخدم فيها خبرتي ولغتي.","lang":"Mein Name ist Mahmoud Nasr, ich bin 39 Jahre alt, komme ursprünglich aus Tanta und lebe derzeit in Kairo. Ich bin verheiratet und habe zwei Töchter, denen ich inzwischen sogar spielerisch Deutsch beibringe.\n\nAn der Banha-Universität habe ich Betriebswirtschaft mit Schwerpunkt Rechnungswesen studiert. Während meines Studiums habe ich fundierte Kenntnisse in verschiedenen Office-Programmen erworben, insbesondere in Excel. Diese Fähigkeiten helfen mir heute dabei, Kundendaten effizient zu analysieren und meine Arbeit klar zu strukturieren.\n\nIch verfüge über mehr als neun Jahre Erfahrung im Kundenservice. Meine berufliche Laufbahn begann bei Vodafone Ägypten in den Verkaufsfilialen, wo ich zunächst als Kundenberater tätig war. Dort habe ich täglich mit Kunden interagiert, Produkte vorgestellt, Lösungen erarbeitet und für die Zufriedenheit der Kunden gesorgt – etwas, das für mich bis heute oberste Priorität hat. Nach einigen Jahren wurde ich zum Teamleiter befördert. In dieser Rolle habe ich meine Kolleginnen und Kollegen motiviert, unterstützt und gemeinsam mit ihnen regelmäßig unsere Verkaufsziele erreicht. Teamarbeit und Leadership sind für mich seither zentrale Werte.\n\nVor einigen Jahren habe ich entschieden, intensiv Deutsch zu lernen, weil ich großes Interesse an der Sprache und am deutschsprachigen Arbeitsmarkt hatte. Trotz familiärer Verpflichtungen habe ich mein Ziel konsequent verfolgt und mittlerweile das B2-Niveau abgeschlossen. Seitdem ist die deutsche Sprache ein fester Bestandteil meines Alltags.\n\nDerzeit arbeite ich bei Concentrix in einem deutschsprachigen Kundenservice-Account. Dort unterstütze ich Kunden telefonisch bei technischen Fragen rund um moderne Saugroboter. Besonders erfüllend finde ich es, wenn ich älteren Kunden durch Geduld und klare Kommunikation weiterhelfen kann. Das zeigt mir immer wieder, wie wichtig Zuhören, Empathie und Problemlösungsorientierung in diesem Beruf sind.\n\nNeben meiner Arbeit höre ich gerne Musik, gehe angeln – eine Leidenschaft aus meiner Kindheit – und habe begonnen, mich für die Oud zu interessieren, weil ich finde, dass sie einen einzigartigen Klang und Charakter hat.\n\nZusammenfassend würde ich mich als eine neugierige, lernbereite und verantwortungsbewusste Person beschreiben, die gerne Herausforderungen annimmt und darin Chancen sieht. Ich bin überzeugt, dass meine langjährige Erfahrung im Kundenservice, meine Teamfähigkeit sowie meine Sprachkenntnisse in Deutsch und Englisch eine wertvolle Bereicherung für Ihr Unternehmen sein können.\n\nMein Name ist Mahmoud Nasr, ich bin 39 Jahre alt, in Tanta geboren und lebe derzeit in Kairo, weil ich dort arbeite. Ich bin verheiratet und habe zwei Töchter. Übrigens unterrichte ich sie jetzt Deutsch.\n\nAn der Banha Universitat studierte ich,\nwo ich mich besonders fur Rechnungswesen Abteilung interessierte. Meine akademische Laufbahn hat mir ermoglicht. habe ich Kenntnisse in vielen und verschiedenen Office-Programmen erworben, insbesondere in Excel.\nUnd ich strebe danach, meine Fahigkeiten in diesem Bereich weiterzuentwickeln zusätzlich zu meiner Tatigkeit im Bereich Kundenservice, da es mir hilft, Kundendaten zu sammeln und meine Arbeit so zu organisieren, dass ich die Dinge erledigen kann. Ich arbeite seit über neun Jahren im Bereich Kundenservice. Meine Karriere begann bei Vodafone agypten Dort arbeitete ich in den verkaufs Filialen, die das Unternehmen auf der Strasse besitzt, um die Kunden zu bedienen., wo ich zunächst als Kundenberater in den Filialen gearbeitet habe. Dort habe ich täglich mit Kunden kommuniziert, Produkte verkauft, Lösungen angeboten und dafür gesorgt, dass unsere Kunden zufrieden sind – das war und ist für mich immer das wichtigste Ziel. Besonders gut an meinem beruf gefallt mir, dass meine Arbeit so sinnvoll ist. Ich wollte schon immer andere Menschen glucklich machen. Das ist meine Pflicht und fur mich mehr als nur ein beruf.\n\nNach einigen Jahren wurde ich zum Teamleiter befördert. In dieser Rolle habe ich meine Kolleginnen und Kollegen unterstützt, motiviert und mit ihnen gemeinsam unsere monatlichen Ziele erreicht.\nWir waren oft eines der besten Teams – das hat mir gezeigt, wie wichtig Teamarbeit ist.\nVor einigen Jahren habe ich mich entschieden, Deutsch zu lernen, da ich großes Interesse an der Sprache und am deutschsprachigen Arbeitsmarkt hatte. Ich habe über zwei Jahre lang intensiv gelernt und konnte bereits ein gutes Sprachniveau erreichen. Trotz meiner familiären Verpflichtungen habe ich nie aufgegeben – im Gegenteil, es hat mich noch mehr motiviert.\n\nAktuell arbeite ich bei der Firma Concentrix in einem deutschsprachigen Kundenservice-Account. Wir betreuen Kunden telefonisch und helfen ihnen bei technischen Fragen rund um moderne Saugroboter. Ich finde es sehr erfüllend, wenn ich insbesondere älteren Kunden bei ihren Anliegen helfen kann – das zeigt mir jeden Tag, wie wichtig Geduld, Zuhören und klare Kommunikation sind.\n\nIch liebe es, Deutsch zu sprechen – die Sprache ist mittlerweile ein fester Bestandteil meines Lebens. Ich bringe sogar meinen Kindern spielerisch erste Sätze bei, um ihr Interesse zu wecken.\n\nIn meiner Freizeit höre ich gerne Musik und gehe angeln – das erinnert mich an meine Kindheit, wenn ich mit meinem Vater ans Meer gegangen bin. Und ich habe mir vorgenommen, bald ein neues Instrument zu lernen: die Oud – Warum.. Ich finde, es hat einen besonderen Charakter. Und wer Musik liebt, wird die Oud immer lieben.\n"},{"id":"erreicht","cat":"experience","q_ar":"إيه اللي حققته في مسيرتك؟","q_de":"Was haben Sie in Ihrem Beruf erreicht?","tags":["إنجاز","نجاح","Erfolg","KPI","أهداف"],"kurz":"In meiner bisherigen Karriere habe ich meine Ziele und KPIs immer erreicht oder sogar übertroffen. Besonders stolz bin ich auf zwei Dinge: Ich habe einen Case Guide erstellt – eine Sammlung der häufigsten Probleme mit Schritt-für-Schritt-Lösungen, die neuen Kollegen die Einarbeitung deutlich erleichtert. Außerdem habe ich Vorlagen für die Kundenkommunikation entwickelt, die die Arbeit im Team schneller und einheitlicher machen. Als Teamleiter habe ich mein Team unterstützt, und wir waren oft eines der besten Teams.","ar":"حققت أهدافي ومؤشرات الأداء دائمًا أو تجاوزتها. أهم إنجازين: عملت Case Guide لأكثر المشكلات شيوعًا مع حلول خطوة بخطوة سهّل تدريب الجدد، وطوّرت نماذج للتواصل مع العملاء سرّعت عمل الفريق. وكرائد فريق دعمت الفريق وكنا من الأفضل.","lang":"In meiner bisherigen Karriere habe ich vor allem erreicht, dass ich stets meine Ziele und KPIs erfüllt oder sogar übertroffen habe. Besonders wichtig war mir dabei immer, nicht nur Probleme zu lösen, sondern auch das Vertrauen der Kunden zu gewinnen und langfristige Beziehungen aufzubauen. Kundenzufriedenheit und Kundenloyalität standen für mich immer im Mittelpunkt.\n\nDarüber hinaus habe ich aktiv dazu beigetragen, meine Teams zu unterstützen. Zum Beispiel habe ich neue Ideen eingebracht, die den Einarbeitungsprozess für neue Kolleginnen und Kollegen deutlich erleichtert haben. Ich habe einen sogenannten Case Guide erstellt – eine strukturierte Sammlung der häufigsten Probleme mit Schritt-für-Schritt-Lösungen, die es neuen Mitarbeitern ermöglicht, schneller Sicherheit zu gewinnen und effizient zu arbeiten.\n\nAußerdem habe ich praktische Vorlagen entwickelt, die die Kommunikation mit Kunden vereinfachen. Diese helfen, wichtige Informationen schneller bereitzustellen, ohne dass der Kunde das Gefühl hat, mit einer Maschine oder KI zu sprechen. Das hat die Qualität unseres Kundenservices spürbar verbessert und unsere Effizienz gesteigert.\n\nIch denke, diese Mischung aus Zielorientierung, Kundenzufriedenheit und Teamunterstützung beschreibt meine wichtigsten Erfolge im Berufsleben.\n\nIn meinem vorherigen Job habe ich gelernt, organisiert zu sein.\nhabe ich auch multitaskfahig zu machen. Ich habe gelernt, mehrere Aufgaben zu bewältigen.\nIch hatte mit vielen Kunden zu tun und lernte viele Fähigkeiten, zum Beispiel\nKommunikationsfähigkeit... Problemlösungsfähigkeiten\nIch habe auch gelernt, einen Zeitplan für die Erledigung all meiner Aufgaben zu erstellen.\nIch habe gelernt, geduldig und ruhig zu sein, wenn ich Entscheidungen treffe.\nIch habe auch gelernt, dass Kundenzufriedenheit das Wichtigste ist und ich mich immer darum bemühen sollte.","audio":null},{"id":"besonderes","cat":"experience","hot":true,"q_ar":"إيه اللي يميّزك عن غيرك؟","q_de":"Was macht Sie besonders?","tags":["تميّز","ليه أنت","Stärke","ميزة"],"kurz":"Was mich besonders macht, ist die Kombination aus Erfahrung und Sprache: Ich arbeite seit über neun Jahren im Kundenservice und seit zwei Jahren täglich auf Deutsch. Ich bleibe ruhig, wenn ein Kunde verärgert ist, und ich kann komplizierte Dinge einfach erklären. Außerdem bringe ich Struktur mit – ich habe eigene Vorlagen und Anleitungen erstellt, von denen das ganze Team profitiert. Ich lerne schnell und arbeite selbstständig.","ar":"اللي يميزني هو المزيج بين الخبرة واللغة: 9 سنين خدمة عملاء وسنتين شغل يومي بالألماني. بفضل هادي لو العميل متعصب، وبشرح الحاجة الصعبة ببساطة، وبحب أنظّم الشغل — عملت نماذج وأدلة استفاد منها الفريق كله.","lang":"In meiner bisherigen Karriere habe ich vor allem erreicht, dass ich stets meine Ziele und KPIs erfüllt oder sogar übertroffen habe. Besonders wichtig war mir dabei immer, nicht nur Probleme zu lösen, sondern auch das Vertrauen der Kunden zu gewinnen und langfristige Beziehungen aufzubauen. Kundenzufriedenheit und Kundenloyalität standen für mich immer im Mittelpunkt.\n\nDarüber hinaus habe ich aktiv dazu beigetragen, meine Teams zu unterstützen. Zum Beispiel habe ich neue Ideen eingebracht, die den Einarbeitungsprozess für neue Kolleginnen und Kollegen deutlich erleichtert haben. Ich habe einen sogenannten Case Guide erstellt – eine strukturierte Sammlung der häufigsten Probleme mit Schritt-für-Schritt-Lösungen, die es neuen Mitarbeitern ermöglicht, schneller Sicherheit zu gewinnen und effizient zu arbeiten.\n\nAußerdem habe ich praktische Vorlagen entwickelt, die die Kommunikation mit Kunden vereinfachen. Diese helfen, wichtige Informationen schneller bereitzustellen, ohne dass der Kunde das Gefühl hat, mit einer Maschine oder KI zu sprechen. Das hat die Qualität unseres Kundenservices spürbar verbessert und unsere Effizienz gesteigert.\n\nIch denke, diese Mischung aus Zielorientierung, Kundenzufriedenheit und Teamunterstützung beschreibt meine wichtigsten Erfolge im Berufsleben.\n\nIn meinem vorherigen Job habe ich gelernt, organisiert zu sein.\nhabe ich auch multitaskfahig zu machen. Ich habe gelernt, mehrere Aufgaben zu bewältigen.\nIch hatte mit vielen Kunden zu tun und lernte viele Fähigkeiten, zum Beispiel\nKommunikationsfähigkeit... Problemlösungsfähigkeiten\nIch habe auch gelernt, einen Zeitplan für die Erledigung all meiner Aufgaben zu erstellen.\nIch habe gelernt, geduldig und ruhig zu sein, wenn ich Entscheidungen treffe.\nIch habe auch gelernt, dass Kundenzufriedenheit das Wichtigste ist und ich mich immer darum bemühen sollte.","audio":null},{"id":"wechsel","cat":"motivation","q_ar":"ليه سبت الشغل القديم / ليه بتغيّر؟","q_de":"Warum haben Sie Ihre vorherige Stelle verlassen?","tags":["ترك العمل","تغيير","كündigung","wechseln"],"kurz":"Ich habe meine Stelle in der Filiale verlassen, weil ich dort genug Erfahrung gesammelt hatte und keine echte neue Herausforderung mehr gesehen habe. Danach habe ich bewusst Deutsch gelernt und arbeite heute im deutschsprachigen Kundenservice. Dieser Schritt hat mir gezeigt, wie viel ich in kurzer Zeit lernen kann. Jetzt möchte ich den nächsten Schritt machen: bei einem deutschen Unternehmen arbeiten, wo ich mich langfristig entwickeln kann.","ar":"سبت الفرع بعد ما خدت خبرة كافية ومبقاش فيه تحدٍّ جديد، وبعدها اتعلمت الألماني بشكل جدي وأشتغل حاليًا في دعم باللغة الألمانية. دلوقتي عايز الخطوة اللي بعدها: شغل في شركة ألمانية بتطوير طويل المدى.","lang":"Ich arbeite jetzt von zu Hause aus. Ich arbeite jeden Tag an dem Projekt Vodafone Cash.\nIch arbeite in der Unternehmensabteilung und kümmere mich um die Kunden, löse ihre Probleme und biete ihnen den besten Service, ohne in die Filiale zu gehen.\nich habe meinen Job in der Filiale aufgegeben\nweil ich ausreichend Erfahrung gesammelt habe\nund es keine neuen Herausforderungen mehr gibt.\nAußerdem arbeite ich in der Apotheke meines Vaters.\nAber ich freue mich auf einen besseren Job, nachdem ich Deutsch gelernt habe. Darüber hinaus Wenn wir unser Leben analysieren. Wir stellen fest, dass sich dasLeben verändert hat und die Preise gestiegen sind Daher habe ich diese Entscheidung getroffen, ganz ehrlich\nJetzt, da ich eine Familie und zwei Töchter habe,\nMeine Verantwortung hat zugenommen.\nDeswegen habe ich beschlossen, meinen Job zu verlassen und Deutsch zu lernen.\nFür einen besseren Job.\nÜbrigens, ich glaube an etwas.\nDie eigentliche Herausforderung besteht für mich darin, das, was ich tue, zu lieben, darin erfolgreich zu sein und mich Taglich für neue Dinge zu begeistern..\nMein Leben hat sich drastisch verandert, nachdem ich meinen Job aufgegeben hatte,\nWeil ich jetzt genug Zeit habe, eine neue Sprache zu lernen....\nJetzt suche ich eine neue Herausforderung in einer neuen Unternehmen.","audio":null},{"id":"aktuell","cat":"motivation","draft":true,"q_ar":"ليه عايز تسيب شركتك الحالية؟","q_de":"Warum möchten Sie Ihr aktuelles Unternehmen verlassen?","tags":["نتفليكس","Concentrix","تغيير","مواعيد"],"kurz":"Ich bin dankbar für die Erfahrung bei Concentrix – dort habe ich mein Deutsch im Berufsalltag wirklich verbessert und viel über deutsche Kundenerwartungen gelernt. Jetzt suche ich aber eine langfristige Perspektive: eine feste Stelle mit planbaren Arbeitszeiten und der Möglichkeit, mich fachlich weiterzuentwickeln. Genau das erhoffe ich mir bei Ihnen.","ar":"شاكر لتجربة Concentrix لأنها قوّت ألماني وعلمتني توقعات العميل الألماني. لكن دلوقتي بدور على استقرار: وظيفة ثابتة بمواعيد منظمة وتطوير حقيقي — وده اللي بتمناه عندكم.","lang":"Ich bin dankbar für die Erfahrung bei Concentrix – dort habe ich mein Deutsch im Berufsalltag wirklich verbessert und viel über deutsche Kundenerwartungen gelernt. Jetzt suche ich aber eine langfristige Perspektive: eine feste Stelle mit planbaren Arbeitszeiten und der Möglichkeit, mich fachlich weiterzuentwickeln. Genau das erhoffe ich mir bei Ihnen.","audio":null},{"id":"warum_wir","cat":"motivation","hot":true,"q_ar":"ليه إحنا؟ وليه نختارك أنت؟","q_de":"Warum sollten wir Sie für eine Zusammenarbeit auswählen?","tags":["ليه إحنا","اختيار","Zusammenarbeit","beitragen"],"kurz":"Ich bringe über neun Jahre Erfahrung im Kundenservice mit, davon zwei Jahre im deutschsprachigen Support. Ich kenne die Erwartungen deutscher Kunden aus dem Alltag: klare Auskünfte, Verbindlichkeit und Freundlichkeit auch in schwierigen Gesprächen. Ich arbeite strukturiert, bleibe unter Druck ruhig und bringe mich gern ins Team ein. Deshalb bin ich überzeugt, dass ich Ihre Erwartungen nicht nur erfülle, sondern übertreffe.","ar":"معايا 9 سنين خبرة، منها سنتين دعم بالألماني، وعارف توقعات العميل الألماني: إجابة واضحة، التزام، ولباقة وقت الضغط. بشتغل منظم وهادي وبحب العمل الجماعي — وبثق إني هعدّي توقعاتكم.","lang":"Ich verfüge über ausgeprägte Kommunikationsfähigkeiten, und Erfahrung im Kundenservice. Sonderen auch habe ich kenntiness in viele und verschieden office programme insbesonders Excel und outlook\nund strebe danach meine fahigkeiten........\n Ich weiß, wie wichtig es ist, den Kunden in den Mittelpunkt zu stellen und ihm stets den bestmöglichen Service zu bieten.\nIch bin überzeugt, dass ich mit meinen Fähigkeiten einen positiven Beitrag für Ihr Unternehmen leisten kann und freue mich darauf, Teil Ihres Teams zu werden.\nIch weiß, dass ich in nicht allzu langer Zeit Teil eines starken Teams im Unternehmen sein werde.\nIch trage mit einem starken Team zu den Wachstumsplänen des Unternehmens bei.\nVerbreitung einer Kultur der Loyalität im Team\nGroßartige Ergebnisse in meinem Zielmarkt zu erzielen.\nWeil es mir sehr gut gefällt, besonders wenn das Arbeitsumfeld gut ist.\nSchlisslich\n„Ich bin überzeugt, dass ich Ihre Erwartungen nicht nur erfüllen, sondern übertreffen kann.\n\"Ich bin fest davon überzeugt, dass meine Fähigkeiten und meine Motivation perfekt zu dieser Position passen. Ich freue mich darauf, gemeinsam mit Ihrem Team erfolgreich zu sein Ihrer Kunden zu erfüllen.","audio":null},{"id":"flex","cat":"behavior","q_ar":"إيه معنى المرونة بالنسبالك؟","q_de":"Was bedeutet Flexibilität im Beruf und im Leben für Sie?","tags":["مرونة","Flexibilität","تغيير"],"kurz":"Für mich bedeutet Flexibilität, sich schnell und ruhig auf neue Situationen einzustellen – im Beruf und im Alltag. Im Kundenservice ist das täglich gefragt, weil die Anforderungen ständig wechseln. Ein Beispiel: An einem Tag kamen mehrere Kunden gleichzeitig mit sehr unterschiedlichen Anliegen. Ich habe ruhig priorisiert, jedem eine passende Lösung angeboten und am Ende gingen alle zufrieden.","ar":"المرونة عندي = إني أتكيّف بسرعة وهدوء مع أي وضع جديد. في خدمة العملاء ده مطلوب كل يوم. مثال: أكتر من عميل في نفس الوقت بطلبات مختلفة — رتّبت الأولويات وحلّيت للكل وخرجوا راضيين.","lang":"Für mich bedeutet Flexibilität die Fähigkeit, sich schnell und effektiv auf neue Situationen einzustellen – sowohl im Berufsleben als auch im Alltag. Gerade im Kundenservice ist das besonders wichtig, weil man täglich mit wechselnden Anforderungen und unerwarteten Situationen konfrontiert wird.\n\nEin Beispiel: An einem Tag kamen mehrere Kunden gleichzeitig mit sehr unterschiedlichen Anliegen. Dank meiner Flexibilität konnte ich schnell priorisieren, passende Lösungen anbieten und sicherstellen, dass alle Kunden zufrieden gingen.\n\nAuch im privaten Leben hilft Flexibilität dabei, gelassen auf Veränderungen zu reagieren und konstruktive Wege zu finden. Insgesamt sehe ich Flexibilität als eine zentrale Stärke, um Herausforderungen souverän zu meistern.\n\nFür mich bedeutet Flexibilität die Fähigkeit, sich schnell an neue Situationen und Herausforderungen anzupassen, Für mich bedeutet Flexibilität, dass man sich leicht an neue Situationen anpassen kann, sowohl im Beruf als auch im Alltag. Im Berufsleben ist das besonders wichtig, weil oft unerwartete Dinge passieren. Zum Beispiel im Kundenservice: Es gibt Tage, an denen ich viele verschiedene Aufgaben erledigen muss. Einmal beantworte ich Anfragen, ein anderes Mal helfe ich bei technischen Problemen. Hier zeigt sich, wie wichtig es ist, flexibel zu sein, um die Arbeit gut zu erledigen.\n\nAuch im Leben ist Flexibilität wichtig, weil das Leben oft Überraschungen bringt. Manchmal muss man Pläne ändern oder schnell auf neue Umstände reagieren. Flexibilität hilft dabei, ruhig zu bleiben und Lösungen zu finden.\n\nEin Beispiel aus meinem Arbeitsalltag: Eines Tages kamen mehrere Kunden gleichzeitig mit unterschiedlichen Anliegen in die Filiale. Einige hatten Fragen, andere hatten Beschwerden. Ich musste schnell entscheiden, wie ich jedem Kunden helfen kann. Durch Flexibilität konnte ich alle Probleme lösen, und die Kunden waren am Ende sehr zufrieden.","audio":null},{"id":"loyal","cat":"behavior","q_ar":"إيه معنى الولاء Loyalität؟","q_de":"Was bedeutet für Sie Loyalität?","tags":["ولاء","Loyalität","ثقة"],"kurz":"Loyalität bedeutet für mich, ehrlich und transparent zu handeln – gegenüber dem Kunden und gegenüber dem Unternehmen. Für den Kunden heißt das: seine Probleme wirklich lösen und eine langfristige Beziehung aufbauen. Für das Unternehmen heißt es: den Service verbessern und die Interessen beider Seiten in Einklang bringen. Genau das versuche ich in jedem Gespräch.","ar":"الولاء عندي = أمانة وشفافية مع العميل ومع الشركة. مع العميل: أحل مشكلته فعلًا وأبني علاقة طويلة. ومع الشركة: أحسّن الخدمة وأوازن مصلحة الطرفين — وده اللي بحاول أعمله في كل مكالمة.","lang":"Was bedeutet Loyalität für Sie?\n Für mich ist Loyalität ein großes Wort und ein Ziel, das erfolgreiche Unternehmen anstreben und sich zur Aufgabe machen, im Kundenservice zu erreichen, dass das Unternehmen und der Kunde ein und dieselbe Person sind.\nFür den Kunden bedeutet es, seine Probleme zu lösen, seine Bedürfnisse zu erfüllen und ihm zu helfen, eine lebenslange Beziehung mit Ehrlichkeit und Transparenz aufzubauen, und für das Unternehmen bedeutet es, den Service zu optimieren.\nEs bedeutet auch, die Bedürfnisse des Kunden und die Interessen des Unternehmens zu erfüllen.\nIn meiner Arbeit im Kundendienst ist Loyalität das, was zu anhaltendem Erfolg führt und ein Unternehmen vor den Menschen in der ganzen Welt gut aussehen lässt. Sie spielt eine Schlüsselrolle bei der Differenzierung des Unternehmens von anderen.","audio":null},{"id":"misserfolg","cat":"behavior","q_ar":"بتتعامل إزاي مع الفشل؟","q_de":"Wie gehen Sie mit Misserfolg um?","tags":["فشل","Misserfolg","خطأ","تعلم"],"kurz":"Misserfolge sind nie angenehm, aber ich sehe sie als Lernchance. Ich analysiere zuerst ruhig, was schiefgelaufen ist, und überlege, was ich beim nächsten Mal anders mache. Im Kundenservice heißt das zum Beispiel: Ich nehme Kundenfeedback ernst und verbessere meine Arbeitsweise, statt mich zu ärgern. Fehler gehören zum Lernen dazu – wichtig ist, dass man nicht zweimal denselben Fehler macht.","ar":"الفشل مش مريح، لكني بشوفه فرصة تعلّم. بحلّل بهدوء إيه اللي حصل غلط وأفكر أعمل إيه مختلف المرة الجاية. في الشغل معناها: آخد ملاحظات العميل بجدية وأحسّن طريقتي. الأهم إني ماكررش نفس الغلط.","lang":"Misserfolge sind nie einfach,\nAber für mich selbst und meine Lebenserfahrung\nsehe ich es als eine wichtige und zentrale Lernmöglichkeit.\nZuerst analysiere ich die Situation gründlich, um zu verstehen, was schief gelaufen ist.\nund wie ich es in Zukunft besser machen kann.\nEs ist wichtig, sich nicht Misserfolg zu lassen, Sondern positiv und motiviert zu bleiben.\nSchliesslich machen Fehler einen Teil unseres Lebens aus\nund helfen uns dabei\nzu wachsen und stärker zu warden. Fehler sind unvermeidlich auf den weg des Lebens aber es ist wichtig sie als Gelegenheiten zum lernen und wachsen zu betrachten anstatt dich von Misserfolgen, Im Kundenservice bedeutet das zum Beispiel,\ndass ich aus Kundenfeedback lerne und meine Arbeitsweise kontinuierlich verbessere,\num bessere Ergebnisse zu erzielen.","audio":null},{"id":"kritik","cat":"behavior","hot":true,"q_ar":"بتتعامل إزاي مع النقد والضغط؟","q_de":"Wie gehen Sie mit Kritik, Stress und Druck um?","tags":["نقد","Kritik","ضغط","Stress","Druck","توتر"],"kurz":"Kritik ist für mich ein Teil des Lernens, deshalb nehme ich sie nicht persönlich. Ich versuche zu verstehen, was der andere meint, und ändere, was ich ändern kann. Unter Druck bleibe ich ruhig und arbeite mit Prioritäten: erst das Wichtigste, dann der Rest. Wenn ein Kunde unzufrieden ist, bleibe ich bei ihm, bis das Problem gelöst ist, und versichere ihm, dass es nicht wieder passiert.","ar":"النقد جزء من التعلم، فمش باخده بشكل شخصي — بحاول أفهم المقصود وأعدّل اللي أقدر عليه. تحت الضغط بفضل هادي وبشتغل بأولويات. ولو عميل مش راضي بفضل معاه لحد ما المشكلة تتحل وأطمّنه إنها مش هتتكرر.","lang":"Wir sollten uns einig sein dass Kritik\n ist ein wichtiger Teil des Lernprozesses Entwicklung und persönlichen Verbesserung.\nDarüber hinaus muss jeder, der lernen will, Kritik annehmen.\nohne sie persönlich zu nehmen.\nDies ist fur den Fall, wenn Sie sich auch der Kritik stellen und\n sie uberwinden wollen.\n\nversuche ich Standig, die Sichtweise des Kritikers zu verstehen.\nund analysiere ich die Situation gründlich, um zu sehen,\nwas schief gelaufen ist. und wie ich es in Zukunft besser machen kann.\nEs ist wichtig, sich nicht in negativer Kritik zu verstricken,\nSondern positiv und motiviert zu bleiben.\nZum Beispiel.\nWenn ein Kunde unzufrieden ist. Ich versichere ihm, dass ich bei ihm bleibe,\nbis das Anliegen gelöst ist, und suche nach einer schnellen und effektiven Lösung\nund ich verspreche Ihnen, dass dieses Anliegen nicht wieder auftreten wird.\nIm Kundenservice Bereich ist es besonders wichtig,\noffen für Feedback zu sein, da es hilft, den Service zu optimieren\nund die Kundenzufriedenheit zu steigern.","audio":null},{"id":"eigenschaften","cat":"service","q_ar":"إيه مواصفات موظف خدمة العملاء؟","q_de":"Was sind die Eigenschaften eines guten Kundenbetreuers?","tags":["مواصفات","أجنت","Kundenbetreuer","مهارات"],"kurz":"Ein guter Kundenbetreuer braucht vor allem Kommunikationsfähigkeit, Geduld und Empathie, weil man oft mit unzufriedenen Kunden spricht. Dazu kommen Problemlösungsfähigkeit, gute Organisation und Freundlichkeit im Kontakt. Wichtig ist auch Teamfähigkeit – viele Fälle löst man nur mit Unterstützung der Kollegen. Und man muss bereit sein, ständig dazuzulernen.","ar":"الأجنت الكويس محتاج قبل كل حاجة: تواصل جيد، صبر، وتفهّم لإنه بيتعامل مع عملاء زعلانين. وكمان حل مشكلات، تنظيم، وبشاشة. وال teamwork مهم جدًا — واجد حالات مش بتتحل غير بمساعدة الزملاء.","lang":"Ein guter Kundenbetreuer sollte über ausgezeichnete Kommunikationsfähigkeiten verfügen, um effektiv mit Kunden zu friedenen.\nGeduld und Empathie sind ebenfalls wichtig,\n\nda man oft mit unzufriedenen Kunden zu tun hat.\nProblemlösungsfähigkeiten sind entscheidend, um schnell Lösungen für Kundenanliegen zu finden.\n\nEin guter Kundenbetreuer sollte auch gut organisiert sein\nund multitaskingfähig sein, um mehrere Anfragen gleichzeitig bearbeiten zu können.\n\ndamit man als kundenberater arbeiten kann,\nEr soll mit den kunden gut umgehen,\nEr soll hilfsbereit sein, und mag standig den leuten helfen.\nAuch soll er im Kontakt freundlich sein.\n\nSchließlich sind Geduldig und Flexibilität wichtig,\nfür Arbeitsumfeld erfolgreich zu sein.","audio":null},{"id":"staerken","cat":"personal","hot":true,"q_ar":"نقاط قوتك وضعفك؟","q_de":"Was sind Ihre besonderen Stärken und Schwächen?","tags":["قوة","ضعف","Stärken","Schwächen"],"kurz":"Meine Stärken sind Zuverlässigkeit, Geduld und strukturiertes Arbeiten – ich halte Zeitpläne ein, und man kann sich auf mich verlassen. Dazu kommt meine Erfahrung im Umgang mit schwierigen Kunden. Meine Schwäche: Ich neige dazu, zu perfektionistisch zu sein, und brauche manchmal zu lange, bis ich mit einem Ergebnis zufrieden bin. Daran arbeite ich bewusst, indem ich mir klare Zeitgrenzen setze und Ergebnisse auch mal abgebe.","ar":"قوتي: الالتزام، الصبر، والتنظيم — بلتزم بالمواعيد وينفع يتعتمد عليّ، ومعايا خبرة في التعامل مع العملاء الصعبين. ضعفي: بحب الكمالية وباخد وقت أطول لحد ما أرضى عن النتيجة، وبشتغل على ده بإني أحدد وقت وأسلّم في ميعاده.","lang":"Wir sollten uns einig sein; dass jeder Mensch Schwäche und Stärke hat.\nÜber meine Erfahrung und mein Erlebnis in Bezug auf die Frage.\nliegen meine Stärke darin, dass ich mich standig an Zeitpläne halte. Darüber hinaus bin ich ein Geduldig, Ich kann ebenfalls die Verantwortung übernehmen,\nLösungen für die Problemen zu finden und Man kann sich auf mich verlassen.\nIch habe auch die Teamfähigkeit, was im Kundenservice sehr wichtig ist,\nIch kann gut auf Kundenwünsche eingehen,\nDank meiner Erfahrung im Kundendienst kann ich die Persönlichkeit des Kunden schnell erfassen und unsere Produkte klar und verständlich erklären,\n\nWas meine Schwächen betrifft,\nNiemand ist perfekt, ich versuche aber immer mich zu verbessern und bin bereit,\nmeinen fehler anzuerkennen und zu korrigieren. neige ich manchmal dazu, zu perfektionistisch zu sein. Das bedeutet, dass ich oft sehr viel Zeit damit verbringe, sicherzustellen, dass alles perfekt ist.\nMich stort am meisten, Die Geräusche. Wenn es Geräusche gibt. kann ich mich nicht auf meinen Aufgabenstellung kozentrieren.\nbesonders wahrend des Gesprachs.\nweil ich den kunde nicht so gut horen kann,\nwie kann ich ihm helfen. so brauche ich eine Ruhe, damit ich ihn horen kann. dann helfe ich ihm dabei. Ich strebe immer nach dem besten Ergebnis, und das führt dazu, dass ich zu viel arbeite, und das ist sehr anstrengend für mich. Ich wünschte, ich könnte den Erfolg einfach akzeptieren, ohne nach dem perfekten Erfolg zu streben.","audio":null},{"id":"kundenservice","cat":"service","hot":true,"q_ar":"إيه معنى خدمة العملاء؟","q_de":"Was ist Kundenservice?","tags":["خدمة عملاء","Kundenservice","تعريف"],"kurz":"Kundenservice bedeutet für mich, den Kunden in den Mittelpunkt zu stellen: zuhören, das Problem wirklich verstehen und schnell eine Lösung finden – freundlich und lösungsorientiert. Guter Service reagiert nicht nur, sondern denkt auch voraus. Am Ende geht es darum, Vertrauen aufzubauen und den Kunden langfristig zu halten.","ar":"خدمة العملاء عندي = العميل في المركز: أسمع، أفهم المشكلة فعلًا، وألاقي حل بسرعة — بلطف وبتركيز على الحل. الخدمة الكويسة مش بس بتتفاعل، بتتوقع كمان. وفي الآخر الهدف: ثقة العميل واستمراره مع الشركة.","lang":"Kundenservice bedeutet für mich, dass ich die Bedürfnisse der Kunden in den Mittelpunkt stelle. Es geht darum, bei Fragen oder Problemen schnell und effizient zu helfen, und dabei stets freundlich und lösungsorientiert zu handeln. Mein Ziel ist es immer, den Kunden zufriedenzustellen und eine langfristige Beziehung aufzubauen.“ „Für mich ist Kundenservice weit mehr als nur die Beantwortung von Anfragen. Es bedeutet, dem Kunden das Gefühl zu geben, dass seine Anliegen ernst genommen werden und er in guten Händen ist. Ein exzellenter Kundenservice zeichnet sich dadurch aus, dass man nicht nur auf Probleme reagiert, sondern proaktiv handelt, um potenzielle Herausforderungen zu vermeiden. Zum Beispiel, wenn ein Kunde ein technisches Problem hat, reicht es nicht aus, nur eine Lösung anzubieten; es ist auch wichtig, den Kunden durch den gesamten Prozess zu begleiten und sicherzustellen, dass er das Problem vollständig versteht und zufrieden ist. Letztendlich geht es darum, Loyalität zu schaffen, was für den langfristigen Erfolg eines Unternehmens ist.“„Kundenservice bedeutet für mich, den Kunden immer in den Mittelpunkt zu stellen. Es geht darum, auf seine Fragen und Anliegen einzugehen und sicherzustellen, dass er mit einer Lösung zufrieden ist. Ein Beispiel aus meiner Erfahrung: Ein Kunde hatte Schwierigkeiten mit einer Online-Bestellung. Anstatt ihm nur zu sagen, wie er das Problem beheben kann, habe ich ihn Schritt für Schritt durch den Prozess geführt. Ich habe ihm gezeigt, wie er die Bestellung erneut aufgeben kann und ihm dabei geholfen,\nseine Daten zu überprüfen. Am Ende war der Kunde sehr dankbar, weil er die Hilfe bekommen hat, die er wirklich brauchte. Solche Situationen zeigen mir, wie wichtig es ist, geduldig und aufmerksam zu sein.","audio":null},{"id":"problem","cat":"service","hot":true,"q_ar":"احكيلي موقف حلّيت فيه مشكلة لعميل","q_de":"Nennen Sie eine Situation, in der Sie ein Problem für einen Kunden gelöst haben.","tags":["موقف","STAR","مشكلة","قصة","Situation"],"kurz":"Ein Kunde kam sehr aufgebracht in die Filiale, weil sein Guthaben jeden Tag viel zu schnell leer war. Ich habe ihn zuerst beruhigt und dann gemeinsam mit ihm die Nutzung überprüft. Die Ursache war, dass er und sein Sohn stundenlang YouTube-Videos in HD geschaut haben. Ich habe ihm gezeigt, wie er die Videoqualität reduzieren kann, und ihm ein passenderes Datenpaket empfohlen. Am Ende war der Kunde zufrieden und hat sich ausdrücklich bedankt.","ar":"عميل جه الفرع متعصب إن رصيده بيخلص بسرعة. هدّيته وراجعنا الاستخدام مع بعض، وطلع إنه وابنه بيتفرجوا ساعات على يوتيوب بجودة HD. وضّحتله إزاي يقلل الجودة ونصحتله باقة أنسب. في الآخر رضي وشكرني.","lang":"Eines Tages kam ein Kunde sehr aufgebracht in die Filiale und beschwerte sich, dass sein Guthaben jeden Tag viel zu schnell aufgebraucht wird.\nEr meinte, er lädt sein Handy immer mit genug Guthaben auf, aber trotzdem ist es am Abend schon leer, ohne dass er viel telefoniert oder das Internet benutzt.\n\nZuerst habe ich versucht, den Kunden zu beruhigen und ihm versichert, dass wir das Problem zusammen lösen werden.\nWir haben gemeinsam sein Konto und die Nutzung des Internets überprüft,\naber es schien alles in Ordnung zu sein. Nichts deutete darauf hin, dass sein Guthaben ungewöhnlich schnell verbraucht wurde.\n\nDoch der Kunde bestand darauf, dass etwas nicht stimmt. Er erzählte mir, dass er das Internet nur kurz zum Surfen benutzt,\n\nund trotzdem sei sein Datenvolumen immer weg. Ich fragte ihn dann, wie er das Internet genau nutzt, und da wurde es interessant. Er sagte mir: „Ich schaue nur ein paar kurze Videos am Tag.“\n\nDas erregte meine Aufmerksamkeit, und ich fragte ihn, auf welcher Plattform er diese Videos anschaute.\nEs stellte sich heraus, dass er sich stundenlang YouTube-Videos in der höchsten Qualität (HD) ansah, ohne zu merken, dass dies schnell seine Daten verbrauchte!\nIch habe ihm dann erklärt, dass HD-Videos sehr viele Daten verbrauchen, und ihm gezeigt, wie er die Qualität der Videos reduzieren kann, um seine Daten zu sparen.\nSein Sohn war dabei, und ich merkte, dass er sich darüber ärgerte, vielleicht spielt er auch manchmal auf dem Telefon oder sieht sich Zeichentrickfilme in High Definition an. Als mir das klar wurde... Ich riet ihm, ein höheres Paket zu kaufen, mit dem er länger telefonieren kann, und sagte ihm, dass ich das Paket für Ihren Sohn verdoppeln würde, wenn er sich Zeichentrickfilme ansieht... Da lächelte das Kind wieder und freute sich, und ich erinnerte mich an meine Tochter Malika und daran, was sie jeden Tag mit meinem Handy macht und wie glücklich es die Kinder macht.\n\nAm Ende lachte der Kunde und sagte: „Jetzt verstehe ich endlich, warum mein Guthaben jeden Tag so schnell zur Neige geht! Das Kind sah mich an und lächelte. Ich dachte, mein Handy sei kaputt! Und er schaute mich an.\nEr bat mich, das Angebot zu erfüllen, und verließ die Filiale mit seinem Sohn. Er war glücklich und sagte: „Vielen Dank, ich komme nächste Woche wieder und kaufe zwei Leitungen für meine Frau und meinen Bruder. Wenn ich mich an diese Situation erinnere, bin ich sehr glücklich, dass ich ein Kind glücklich machen und gleichzeitig ein Problem lösen konnte.","audio":null},{"id":"kundensituation","cat":"service","q_ar":"موقف حصل لك مع عميل في الشغل","q_de":"Erzählen Sie von einer Situation, die Ihnen bei der Arbeit mit einem Kunden passiert ist.","tags":["موقف","عميل","شكوى","قصة","Erfahrung"],"kurz":"Eine Kundin fragte nach dem Stand der Reparatur ihres Geräts. Mit der Telefonnummer konnte ich nichts finden, und sie wollte zuerst keine weiteren Daten geben. Ich habe ruhig erklärt, warum ich Ticketnummer oder E-Mail brauche, und sie gab mir schließlich ihre E-Mail. Dabei stellte sich heraus, dass das Gerät noch nicht bearbeitet war – sie war sehr verärgert und wollte ihr Geld zurück. Ich bat sie um zwei Minuten und fand das Gerät über die Seriennummer: Es war angekommen, aber Ersatzteile fehlten. Ich habe ihr zwei Optionen angeboten und den Rabatt auf ein neues Gerät empfohlen. Sie hat sich am Ende ausdrücklich bedankt.","ar":"زبونة سألت عن حالة إصلاح جهازها. برقم التليفون ملقيتش حاجة، ورفضت تدّي بيانات زيادة. شرحتلها بهدوء ليه محتاج رقم الطلب أو الإيميل، وبعدين أدتني الإيميل — وطلعت إن الجهاز لسه مااتعالجش. اتعصبت وطلبت فلوسها. طلبت منها دقيقتين ولقيته بالرقم التسلسلي: وصل بس ناقص قطع غيار. عرضت عليها خيارين ونصحتها بخصم على جهاز جديد، وفي الآخر شكرتني.","lang":"Eines Tages hatte ich gleich zu Beginn meines Arbeitstages ein Gespräch mit einer Kundin, die sich nach dem Stand der Reparatur ihres Gerätes erkundigte. Zunächst beruhigte ich sie und bat sie um die alte Ticketnummer oder ihre E-Mail-Adresse, da ich mit ihrer Telefonnummer nichts finden konnte. Sie weigerte sich jedoch und sagte, dass ich alle Informationen bereits haben müsse.\n\nMeine Aufgabe war es, die Kundin so schnell wie möglich zu unterstützen, die notwendigen Informationen zu finden und ihr eine Lösung anzubieten, um ihre Zufriedenheit zu gewährleisten.\n\nIch erklärte ihr ruhig, dass die Suche mit Ticketnummer oder E-Mail schneller und gezielter sei. Schließlich gab sie mir ihre E-Mail-Adresse, und ich konnte die Daten im System finden. Dabei stellte ich fest, dass wir ihr Gerät noch nicht im Reparaturprozess hatten. Als ich sie darüber informierte, wurde sie sehr verärgert und forderte sofort ihr Geld zurück.\n\nIch bat sie um zwei Minuten Zeit, um erneut nachzusehen. Mit meiner Erfahrung nutzte ich eine alternative Suchmethode über die Seriennummer und fand das Gerät in einem täglichen internen Bericht. Dort stellte ich fest, dass das Gerät zwar angekommen war, aber nicht repariert werden konnte, da uns bestimmte Ersatzteile fehlten. Die Optionen waren: ein hoher Rabatt auf ein neues Gerät oder die volle Rückerstattung.\n\nIch erklärte ihr diese Möglichkeiten und empfahl ihr, das neue Gerät mit einem Rabatt von über 50 % zu wählen, da ihr aktuelles Gerät bereits über anderthalb Jahre alt war und die neuen Modelle viele zusätzliche Vorteile boten.\n\nDie Kundin war von meiner Transparenz und meiner Empfehlung überzeugt und entschied sich, ein neues Gerät zu kaufen. Am Ende bedankte sie sich sehr für meine Unterstützung und gab mir ein positives Feedback mit einem besonderen Dankeschön.","audio":null},{"id":"wutend","cat":"service","draft":true,"q_ar":"لو العميل عصّب أو شتم، هتعمل إيه؟","q_de":"Wie gehen Sie mit einem wütenden Kunden um?","tags":["عميل متعصب","شكوى","wütend","غضب"],"kurz":"Als Erstes lasse ich den Kunden ausreden und bleibe ruhig – ich unterbreche nicht. Dann zeige ich Verständnis: „Ich kann verstehen, dass Sie verärgert sind.“ Danach fasse ich das Problem mit eigenen Worten zusammen, damit der Kunde merkt, dass ich ihn verstanden habe. Erst dann suche ich eine Lösung und sage klar, was ich jetzt mache und bis wann. Wenn ich nicht weiterkomme, hole ich einen Kollegen oder den Teamleiter dazu.","ar":"أول حاجة: أسمحله يتكلم للآخر وأنا هادي من غير مقاطعة. وبعدين أظهر تفهّم: «أنا فاهم إنك متضايق». ألخّص المشكلة بكلامي عشان يحس إني فهمته. بعد كده أدور على حل وأقول بوضوح بعمل إيه وإمتى. ولو مش قادر أكمل بستعين بزميل أو بال team leader.","lang":"Als Erstes lasse ich den Kunden ausreden und bleibe ruhig – ich unterbreche nicht. Dann zeige ich Verständnis: „Ich kann verstehen, dass Sie verärgert sind.“ Danach fasse ich das Problem mit eigenen Worten zusammen, damit der Kunde merkt, dass ich ihn verstanden habe. Erst dann suche ich eine Lösung und sage klar, was ich jetzt mache und bis wann. Wenn ich nicht weiterkomme, hole ich einen Kollegen oder den Teamleiter dazu.","audio":null},{"id":"kollege","cat":"behavior","draft":true,"q_ar":"لو زميلك غلط قدامك، تعمل إيه؟","q_de":"Was tun Sie, wenn ein Kollege einen Fehler macht?","tags":["زميل","خطأ","Kollege","فريق"],"kurz":"Ich spreche den Kollegen zuerst persönlich und ruhig an – nicht vor anderen und nicht vor dem Kunden. Ich beschreibe die Situation sachlich und frage, ob er es auch so sieht. Wenn der Kunde betroffen ist, informiere ich meinen Teamleiter, damit wir das Problem gemeinsam lösen und der Kunde keinen Schaden hat. Wichtig ist mir: das Problem lösen, nicht den Kollegen beschuldigen.","ar":"بتكلم مع الزميل الأول على انفراد وبهدوء، مش قدام حد ومش قدام العميل. أوصف الموقف بموضوعية وأسأله لو شايف نفس الحاجة. ولو العميل متأثر ببلّغ ال team leader عشان نحل المشكلة من غير ما العميل يتضرر. المهم حل المشكلة مش لوم الزميل.","lang":"Ich spreche den Kollegen zuerst persönlich und ruhig an – nicht vor anderen und nicht vor dem Kunden. Ich beschreibe die Situation sachlich und frage, ob er es auch so sieht. Wenn der Kunde betroffen ist, informiere ich meinen Teamleiter, damit wir das Problem gemeinsam lösen und der Kunde keinen Schaden hat. Wichtig ist mir: das Problem lösen, nicht den Kollegen beschuldigen.","audio":null},{"id":"kultur","cat":"behavior","q_ar":"إيه الفرق بين الثقافة المصرية والألمانية؟","q_de":"Was ist der Unterschied zwischen der ägyptischen und der deutschen Kultur?","tags":["ثقافة","Kultur","فرق","ألمانيا"],"kurz":"Ein großer Unterschied ist der Umgang mit der Zeit: In Deutschland ist Pünktlichkeit sehr wichtig, in Ägypten ist man oft etwas flexibler. Ein zweiter Punkt ist die Kommunikation: Deutsche sprechen direkt und sagen offen ihre Meinung, in Ägypten versucht man eher, niemanden zu verletzen. Auch am Arbeitsplatz ist die Hierarchie in Deutschland flacher. Trotzdem gibt es Gemeinsamkeiten: Respekt und Höflichkeit sind in beiden Kulturen wichtig.","ar":"أكبر فرق هو الوقت: في ألمانيا الدقة في المواعيد أساسية، وفي مصر فيه مرونة أكتر. والفرق التاني التواصل: الألمان مباشرين ويقولوا رأيهم صريح، في مصر بنحاول ما نجرحش حد. وكمان التسلسل الوظيفي في ألمانيا أقل حدة. ومع كل ده فيه قواسم مشتركة: الاحترام واللباقة.","lang":"Es gibt viele Unterschiede zwischen der deutschen und der ägyptischen Kultur. Ein großer Unterschied ist zum Beispiel die Art und Weise Umgang mit der Zeit.\nIn Deutschland ist Pünktlichkeit sehr wichtig.\nDie Menschen legen großen Wert darauf, immer pünktlich zu Terminen oder Besprechungen zu erscheinen.\nWenn eine Besprechung um 9 Uhr beginnt, sind die meisten Menschen ein paar Minuten früher da. In Ägypten hingegen kommen die Menschen oft zu spät zu Terminen und geben als Grund schlechte Verkehrsmittel oder Staus an.\n\nEin Anderen Beispiel ist der Umgang mit Gesprächen von Angesicht zu Angesicht.\nDie Menschen in Deutschland sprechen normalerweise sehr direkt.\nWenn jemand ein Problem oder eine Meinung hat, sagt er das normalerweise direkt und sofort.\nDas wird als ehrlich angesehen.\nIn Ägypten sind die Menschen oft höflicher und versuchen, Konflikte oder unangenehme Themen so anzusprechen, dass sie niemanden verletzen oder in Verlegenheit bringen.\n\nAuch der Arbeitsplatz ist in beiden Kulturen unterschiedlich.\nIn Deutschland ist es oft so, dass der Chef und die Mitarbeiter auf einer eher gleichen Ebene kommunizieren, Die Kommunikation ist direkt, und die Mitarbeiter haben oft die Freiheit, eigene Entscheidungen zu treffen.\nIn Ägypten, die Mitarbeiter fragen den Chef öfter um Rat oder Erlaubnis, bevor sie etwas entscheiden.\nEin gutes Beispiel für die ägyptische Kultur. In Ägypten ist es sehr üblich, Gäste einzuladen. Wenn jemand zu Besuch kommt, wird er oft mit Essen, Trinken und einer sehr warmen Atmosphäre empfangen.\nIn Deutschland gibt es auch, aber sie ist etwas formeller. Gäste werden freundlich empfangen, aber es wird oft vorher geplant, was serviert wird und wie lange der Besuch bleibt.\n\nTrotz dieser Unterschiede gibt es auch Gemeinsamkeiten. Sowohl in Deutschland als auch in Ägypten ist es wichtig, respektvoll miteinander umzugehen.","audio":null},{"id":"warum_deutsch","cat":"language","q_ar":"ليه اتعلمت الألماني؟","q_de":"Warum haben Sie Deutsch gelernt?","tags":["ألماني","Deutsch","سبب","لغة"],"kurz":"Ich habe Deutsch gelernt, weil mich die Sprache und der deutschsprachige Arbeitsmarkt schon lange interessieren. Ich wollte mich beruflich weiterentwickeln und mit Menschen aus einer anderen Kultur arbeiten. Ich habe über zwei Jahre intensiv gelernt – neben Familie und Vollzeitjob – und nie aufgegeben. Heute arbeite ich täglich auf Deutsch, und das war die beste Entscheidung meiner Karriere.","ar":"اتعلمت الألماني لأن اللغة وسوق العمل الألماني شدوني من زمان، وعايز أطوّر نفسي مهنيًا وأشتغل مع ناس من ثقافة مختلفة. درست سنتين بشكل مكثف جنب الشغل والعيلة وما استسلمتش. النهارده بشتغل بالألماني كل يوم وده أحسن قرار في مسيرتي.","lang":"Ich habe Deutsch gelernt, weil ich ein Starkes interesse daran habe.\nIn dieser Sprache zu arbeiten und mich darin auszuzachinen. Die Deutsch sprache klingt beeindruckt fur mich\nDarüber hinaus wollte ich meine Kommunikationsfähigkeit zu verbessen\nund Moglichkeit haben mit Menschen aus anderen Kulturen zu interagieren.\nDie Beherrschung der deutschen Sprache eröffnet viele verschiedene Karrieremöglichkeiten und Sie können auch viel Geld verdienen. Ich analysiere die Situation hier in Ägypten in den letzten Jahren und denke, dass es sehr wichtig und notwendig für jeden ist, andere Sprachen zu lernen, weil sich unser Leben verändert hat und die Preise gestiegen sind. Übrigens denke ich, dass jeder eine neue Sprache lernen muss, um seine Fähigkeiten zu verbessern. Mein Leben hat sich dramatisch verändert, nachdem ich meinen Job aufgegeben habe, denn jetzt habe ich die Zeit, eine neue Sprache zu lernen. Es bietet gut bezahlte Arbeitsmöglichkeiten\nÜbrigens, ich glaube an etwas.\nDie eigentliche Herausforderung besteht für mich darin, das, was ich tue, zu lieben, darin erfolgreich zu sein und mich Taglich für neue Dinge zu begeistern..\n Oh mein Gott, diese Sprache ist sehr wichtig, vor allem für junge Menschen, die am Anfang ihrer Karriere stehen. Sie eröffnet viele und vielfältige Beschäftigungsmöglichkeiten, durch die ein junger Mensch viel Geld verdienen kann.\nUnd das Schöne ist, dass er seine Sprache weiter lernt und verbessert, um größere und bessere Möglichkeiten mit höheren Gehältern zu finden. In der Tat ist diese Sprache unverzichtbar. Eine sehr wichtige Rolle mit vielen Aspekten. Zum Beispiel\nKultur. Arbeiten in Deutschland\n Aber am Anfang fühlte ich mich von der Menge der Sprache, die ich lernen musste, überfordert, und dann hatte ich einen großen Herausfordrungen, die Sprache zu lernen und meine Fähigkeiten zu verbessern.","audio":null},{"id":"wo_deutsch","cat":"language","q_ar":"اتعلمت الألماني فين؟","q_de":"Wo hast du Deutsch gelernt?","tags":["مكان","تعلم","أكاديمية","B2"],"kurz":"Am Anfang habe ich allein gelernt, um zu testen, ob ich wirklich dranbleibe. Danach habe ich in einer Akademie in Tanta mit einer Gruppe von A1 bis B1 gelernt. Aktuell mache ich das B2-Niveau online. Zusätzlich spreche ich dreimal pro Woche auf Plattformen wie Clubhouse mit Muttersprachlern – das hat mir am meisten geholfen.","ar":"في الأول اتعلمت لوحدي عشان أشوف هل هكمل ولا لأ. بعدها دخلت أكاديمية في طنطا مع مجموعة من A1 لـ B1، وحاليًا بعمل B2 أونلاين. وكمان بتكلم 3 مرات في الأسبوع مع ناس ألمان على منصات زي Clubhouse — ودي أكتر حاجة ساعدتني.","lang":"Ursprünglich habe ich Deutsch allein gelernt.\nIch musste die Sprache alleine lernen,\num zu testen, ob ich ein starkes Interesse daran hatte zu bleiben oder nicht. Dann habe ich an einer Akademie hier in Tanta mit einer Gruppe von Kollegen angefangen, die Sprache auf A1-Niveau zu lernen, und ich habe das Studium bis zum B1-Niveau abgeschlossen, und jetzt beende ich das B2-Niveau mit Frau Yasmin, aber der Kurs ist online. und fand\nIch die deutsche Sprache sehr nützlich.\n und Das Beherrschen der deutschen Sprache eröffnet\n viele verschiedene berufliche Möglichkeiten\n und man kann auch viel Geld verdienen\nAm Anfang fiel mir die deutsche Sprache sehr schwer, aber mit der Zeit wurde sie einfacher und ich erkannte, dass es am wichtigsten ist, online mit Menschen zu sprechen.\nIch habe einen Zeitplan aufgestellt, um mein Deutsch zu verbessern.\nZum Beispiel\nDreimal pro Woche gehe ich auf eine bestimmte Plattform, zum Beispiel Clubhouse,\num Muttersprachler zu finden und mit ihnen über verschiedene Themen zu sprechen,\num meine Sprache zu verbessern.\nÜbrigens, ich glaube an etwas.\nDie eigentliche Herausforderung besteht für mich darin, das, was ich tue, zu lieben, darin erfolgreich zu sein und mich Taglich für neue Dinge zu begeistern..\nMein Leben hat sich drastisch verandert, nachdem ich meinen Job aufgegeben hatte,\nWeil ich jetzt genug Zeit habe, eine neue Sprache zu lernen....","audio":null},{"id":"zukunft","cat":"future","q_ar":"تشوف نفسك فين بعد 5 سنين؟","q_de":"Wo sehen Sie sich in fünf Jahren?","tags":["مستقبل","Zukunft","خطة","خمس سنين"],"kurz":"In fünf Jahren sehe ich mich in einer verantwortungsvolleren Position – zum Beispiel als Teamleiter oder Trainer im Kundenservice. Ich möchte mein Team unterstützen, Prozesse verbessern und meine Deutschkenntnisse perfektionieren. Wichtig ist mir, langfristig im Unternehmen zu bleiben und mich dort weiterzuentwickeln.","ar":"بعد 5 سنين شايف نفسي في دور أكبر مسؤولية — مثلاً team leader أو trainer في خدمة العملاء. عايز أدعم فريقي وأحسّن العمليات وأوصل ألماني لمستوى أعلى، والأهم أكون مستقر ومتطور في نفس الشركة.","lang":"In fünf Jahren sehe ich mich in einer verantwortungsvolleren Position, in der ich nicht nur weiterhin Kunden betreue, sondern auch mein Team unterstütze und anleite. Ich möchte meine Fähigkeiten im Kundenservice weiterentwickeln, um sicherzustellen, dass ich immer den besten Service bieten kann, und gleichzeitig neue Wege lernen, wie man die Kundenzufriedenheit steigern kann.\n\nNeben meiner beruflichen Entwicklung möchte ich meine Sprachkenntnisse weiter verbessern, besonders mein Deutsch. Ich könnte mir vorstellen, in fünf Jahren fließend Deutsch zu sprechen, was mir helfen würde, noch effektiver mit Kunden\nZusammengefasst möchte ich in fünf Jahren in einer Position sein, in der ich durch meine Erfahrung, mein Wissen und meine Führungsqualitäten einen positiven Einfluss auf mein Unternehmen und mein Team habe.","audio":null},{"id":"gehalt","cat":"future","draft":true,"q_ar":"توقعاتك من الراتب؟","q_de":"Was sind Ihre Gehaltsvorstellungen?","tags":["راتب","Gehalt","تفاوض"],"kurz":"Ich orientiere mich an den üblichen Gehältern für diese Position in Deutschland und an meiner Erfahrung von über neun Jahren im Kundenservice. Ich möchte hier keine Zahl nennen, die nicht zu Ihrem Budget passt. Könnten Sie mir sagen, welche Spanne für diese Stelle vorgesehen ist? Danach kann ich Ihnen gern eine realistische Einschätzung geben.","ar":"بمشي على الرواتب المعتادة للوظيفة في ألمانيا وعلى خبرتي (9+ سنين). مش عايز أقول رقم مش مناسب لميزانيتكم — ممكن تقولي إيه النطاق المحدد للوظيفة؟ وبعدها أديك تقدير واقعي.","lang":"Ich orientiere mich an den üblichen Gehältern für diese Position in Deutschland und an meiner Erfahrung von über neun Jahren im Kundenservice. Ich möchte hier keine Zahl nennen, die nicht zu Ihrem Budget passt. Könnten Sie mir sagen, welche Spanne für diese Stelle vorgesehen ist? Danach kann ich Ihnen gern eine realistische Einschätzung geben.","audio":null},{"id":"fragen","cat":"future","hot":true,"q_ar":"عندك أسئلة ليّ؟ (آخر سؤال)","q_de":"Haben Sie noch Fragen an uns?","tags":["أسئلة","ختام","Fragen","نهاية"],"kurz":"Ja, ich habe drei kurze Fragen: Wie sieht die Einarbeitung in den ersten Wochen aus? Wie ist das Team zusammengesetzt, mit dem ich arbeiten würde? Und welche Möglichkeiten gibt es, sich im Unternehmen weiterzuentwickeln? Vielen Dank für das Gespräch – ich freue mich auf Ihre Rückmeldung.","ar":"أيوه، عندي 3 أسئلة قصيرة: التدريب في أول أسابيع بيبقى إزاي؟ الفريق اللي هشتغل معاه مكوّن من مين؟ وإيه فرص التطوير داخل الشركة؟ وشكرًا على المقابلة — مستني ردكم.","lang":"Ja, ich habe drei kurze Fragen: Wie sieht die Einarbeitung in den ersten Wochen aus? Wie ist das Team zusammengesetzt, mit dem ich arbeiten würde? Und welche Möglichkeiten gibt es, sich im Unternehmen weiterzuentwickeln? Vielen Dank für das Gespräch – ich freue mich auf Ihre Rückmeldung.","audio":null}],"phrases":[{"cat":"voice","de":"Können Sie mich bitte deutlich hören?","ar":"هل تسمعني بوضوح؟"},{"cat":"voice","de":"Es tut mir sehr leid, die Verbindung ist hier wirklich schlecht.","ar":"آسف جدًا، الاتصال هنا سيئ فعلاً."},{"cat":"voice","de":"Entschuldigung, ich habe Sie akustisch nicht verstanden.","ar":"آسف، لم أفهمك صوتيًا."},{"cat":"voice","de":"Könnten Sie bitte etwas langsamer sprechen?","ar":"ممكن تتكلم أبطأ قليلًا؟"},{"cat":"voice","de":"Die Verbindung ist gerade weg – können wir kurz warten?","ar":"الاتصال انقطع — ممكن نستنى لحظة؟"},{"cat":"time","de":"Einen Moment bitte, ich schaue kurz nach.","ar":"لحظة من فضلك، أتحقق بسرعة."},{"cat":"time","de":"Ich möchte Ihre Frage nicht falsch beantworten. Darf ich kurz nachdenken?","ar":"مش عايز أجاوب غلط. ممكن أفكر لحظة؟"},{"cat":"time","de":"Ich bin mir bei dieser Frage nicht ganz sicher, aber ich versuche es.","ar":"لست متأكدًا تمامًا، لكني سأحاول."},{"cat":"time","de":"Ich weiß es gerade nicht, aber ich lerne schnell und finde eine Lösung.","ar":"لا أعرف الآن، لكني أتعلم بسرعة وأجد حلًا."},{"cat":"clarify","de":"Könnten Sie die Frage bitte etwas genauer erklären?","ar":"ممكن توضّح السؤال أكثر؟"},{"cat":"clarify","de":"Könnten Sie das bitte noch einmal wiederholen?","ar":"ممكن تعيد من فضلك؟"},{"cat":"clarify","de":"Habe ich Ihre Frage richtig verstanden: …?","ar":"هل فهمت سؤالك صحيحًا: …؟"},{"cat":"clarify","de":"Wie meinen Sie das genau?","ar":"ماذا تقصد بالضبط؟"},{"cat":"clarify","de":"Meinen Sie damit … oder …?","ar":"تقصد بكده … ولا …؟"},{"cat":"polite","de":"Danke für die Frage, das ist ein wichtiges Thema.","ar":"شكرًا على السؤال، هذا موضوع مهم. (كسب وقت)"},{"cat":"polite","de":"Ich bin mit Ihnen einer Meinung.","ar":"أنا أتفق معك."},{"cat":"polite","de":"Sie brauchen sich nicht zu entschuldigen.","ar":"لا داعي للاعتذار."},{"cat":"polite","de":"Ich weiß, wie beschäftigt Sie sind – danke für Ihre Zeit.","ar":"أعلم كم أنت مشغول — شكرًا على وقتك."},{"cat":"polite","de":"Vielen Dank für das Gespräch, ich freue mich auf Ihre Rückmeldung.","ar":"شكرًا على المقابلة، أتطلع إلى ردكم."},{"cat":"polite","de":"Könnten Sie mir bitte sagen, wie die nächsten Schritte aussehen?","ar":"ممكن تقولي إيه الخطوات الجاية؟"}]};</script>
+<script>
+(function(){
+  "use strict";
+  var $  = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  function el(t,c,txt){ var e=document.createElement(t); if(c)e.className=c; if(txt!=null)e.textContent=txt; return e; }
+
+  /* ============================================================
+     STORAGE
+     ============================================================ */
+  var KEY = "ic_data_v4";
+  var PREF = "ic_pref_v3";
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      if (!d || !d.questions) return null;
+      return d;
+    }catch(e){ return null; }
+  }
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify(DB));
+      return true;
+    }catch(e){
+      toast("مساحة التخزين اتمتلِت — امسح بعض الأصوات");
+      return false;
+    }
+  }
+
+  var DB = load();
+  if (!DB){
+    DB = { v:3, questions: JSON.parse(JSON.stringify(SEED.questions)),
+           phrases: SEED.phrases.slice(), meta: SEED.meta };
+    DB.questions.forEach(function(q){ q.audio = q.audio || null; if(!q.tags) q.tags=[]; });
+    save();
+  }
+
+  /* -------- audio storage: IndexedDB first, localStorage fallback -------- */
+  var A = (function(){
+    var idb = null, useIDB = null;
+    function open(){
+      if (useIDB === false) return Promise.reject();
+      if (idb) return Promise.resolve(idb);
+      return new Promise(function(res, rej){
+        var r;
+        try { r = indexedDB.open("ic_audio", 1); } catch(e){ useIDB=false; return rej(e); }
+        r.onupgradeneeded = function(){ try{ r.result.createObjectStore("f"); }catch(e){} };
+        r.onsuccess = function(){ idb = r.result; useIDB = true; res(idb); };
+        r.onerror   = function(){ useIDB = false; rej(r.error); };
+        r.onblocked = function(){ useIDB = false; rej("blocked"); };
+      });
+    }
+    function tx(mode){
+      return open().then(function(d){
+        return new Promise(function(res, rej){
+          var t = d.transaction("f", mode);
+          t.oncomplete = function(){ res(); };
+          t.onerror = function(){ rej(t.error); };
+          res(t.objectStore("f"));
+        });
+      });
+    }
+    return {
+      put: function(k, blob){
+        return open().then(function(d){
+          return new Promise(function(res, rej){
+            var t = d.transaction("f","readwrite");
+            t.objectStore("f").put(blob, k);
+            t.oncomplete = function(){ res("idb"); };
+            t.onerror = function(){ rej(t.error); };
+          });
+        }).catch(function(){ return lsPut(k, blob); });
+      },
+      get: function(k){
+        return open().then(function(d){
+          return new Promise(function(res, rej){
+            var t = d.transaction("f","readonly");
+            var rq = t.objectStore("f").get(k);
+            rq.onsuccess = function(){ res(rq.result || null); };
+            rq.onerror = function(){ rej(rq.error); };
+          });
+        }).catch(function(){ return lsGet(k); });
+      },
+      del: function(k){
+        return open().then(function(d){
+          return new Promise(function(res){
+            var t = d.transaction("f","readwrite");
+            t.objectStore("f").delete(k);
+            t.oncomplete = function(){ res(); };
+          });
+        }).catch(function(){}).then(function(){ lsDel(k); });
+      }
+    };
+    function lsKey(k){ return "ic_audio_" + k; }
+    function blobToDataURL(b){
+      return new Promise(function(res){
+        var fr = new FileReader();
+        fr.onload = function(){ res(fr.result); };
+        fr.readAsDataURL(b);
+      });
+    }
+    function lsPut(k, blob){
+      return blobToDataURL(blob).then(function(url){
+        try{ localStorage.setItem(lsKey(k), url); return "ls"; }
+        catch(e){ throw new Error("quota"); }
+      });
+    }
+    function lsGet(k){
+      var v = localStorage.getItem(lsKey(k));
+      if (!v) return null;
+      return fetch(v).then(function(r){ return r.blob(); });
+    }
+    function lsDel(k){ try{ localStorage.removeItem(lsKey(k)); }catch(e){} }
+  })();
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  var S = {
+    id: null,
+    q: "",
+    filter: "all",
+    practice: false,
+    fs: 18,
+    stars: []
+  };
+  try{
+    var p = JSON.parse(localStorage.getItem(PREF) || "{}");
+    S.practice = !!p.practice; S.fs = p.fs || 18; S.stars = p.stars || [];
+    localStorage.setItem(PREF, JSON.stringify({practice:S.practice, fs:S.fs, stars:S.stars}));
+  }catch(e){}
+  function savePref(){
+    try{ localStorage.setItem(PREF, JSON.stringify({practice:S.practice, fs:S.fs, stars:S.stars, last:S.id})); }catch(e){}
+  }
+
+  var CATS = SEED.categories;
+  function catLabel(id){ for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].label; return ""; }
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function norm(s){
+    return (s||"").toLowerCase()
+      .replace(/[äàâ]/g,"a").replace(/[öô]/g,"o").replace(/[üû]/g,"u").replace(/ß/g,"ss")
+      .replace(/[éèê]/g,"e")
+      .replace(/[\u064B-\u065F\u0670]/g,"")
+      .replace(/[أإآ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه")
+      .replace(/[^\w\u0600-\u06FF]+/g," ").trim();
+  }
+  function toast(m){
+    var t = $("#toast"); t.textContent = m; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("show"); },1500);
+  }
+  function copy(txt){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ toast("اتنسخ ✓"); }, function(){ fb(); });
+    } else fb();
+    function fb(){
+      var ta = el("textarea"); ta.value = txt;
+      ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); toast("اتنسخ ✓"); }catch(e){ toast("مش قادر أنسخ"); }
+      ta.remove();
+    }
+  }
+  function tts(text){
+    if (!("speechSynthesis" in window)) return toast("المتصفح لا يدعم النطق");
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text.replace(/…/g,""));
+    u.lang = "de-DE"; u.rate = .93;
+    var v = (window.speechSynthesis.getVoices()||[]).filter(function(x){ return /^de/i.test(x.lang); })[0];
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+    toast(v ? "بنطق: " + v.name : "بنطق ألماني (صوت النظام)");
+  }
+  function fmtSize(b){
+    if (!b) return "";
+    if (b < 1024) return b + " B";
+    if (b < 1048576) return Math.round(b/1024) + " KB";
+    return (b/1048576).toFixed(1) + " MB";
+  }
+  function applyFs(){ document.documentElement.style.setProperty("--fs", S.fs + "px"); }
+  applyFs();
+
+  /* ============================================================
+     SIDEBAR
+     ============================================================ */
+  function renderFilters(){
+    var f = $("#filters"); f.innerHTML = "";
+    function mk(id, label){
+      var b = el("button","fchip"+(S.filter===id?" on":""),label);
+      b.onclick = function(){ S.filter = id; renderFilters(); renderList(); };
+      f.appendChild(b);
+    }
+    mk("all","الكل");
+    mk("star","★ المثبتة");
+    CATS.forEach(function(c){ mk(c.id, c.label); });
+  }
+
+  function renderList(){
+    var box = $("#qlist"); box.innerHTML = "";
+    var terms = norm(S.q).split(" ").filter(Boolean);
+
+    var items = DB.questions.filter(function(q){
+      if (S.filter === "star" && S.stars.indexOf(q.id) === -1) return false;
+      if (S.filter !== "all" && S.filter !== "star" && q.cat !== S.filter) return false;
+      if (!terms.length) return true;
+      var h = norm([q.q_ar,q.q_de,q.kurz,q.ar,(q.tags||[]).join(" ")].join(" "));
+      return terms.every(function(t){ return h.indexOf(t) !== -1; });
+    });
+
+    if (!items.length){
+      box.appendChild(el("div","placeholder","مفيش نتايج…\nجرّب كلمة تانية"));
+      return;
+    }
+
+    var grid = el("div","qgrid");
+    items.forEach(function(q){
+      var b = el("button","tile" + (q.id===S.id?" on":"") + (q.audio?" has-audio":""));
+      b.title = (q.q_de || "") + " — " + (q.q_ar || "");
+      b.appendChild(el("span","num", String(DB.questions.indexOf(q)+1)));
+      var txb = el("span","tx");
+      var de = el("span","de", q.q_de || q.q_ar);
+      if (q.q_de) de.setAttribute("dir","ltr");
+      txb.appendChild(de);
+      if (q.q_de && q.q_ar) txb.appendChild(el("span","ar", q.q_ar));
+      b.appendChild(txb);
+      if (S.stars.indexOf(q.id) !== -1) b.appendChild(el("span","st","★"));
+      b.appendChild(el("span","spk", q.audio ? "🔊" : ""));
+      b.onclick = function(){ selectQuestion(q.id); };
+      grid.appendChild(b);
+    });
+    box.appendChild(grid);
+
+    var act = box.querySelector(".tile.on");
+    if (act && act.scrollIntoView){
+      try { act.scrollIntoView({block:"nearest"}); } catch(e){}
+    }
+  }
+
+  /* ============================================================
+     ANSWER PANEL
+     ============================================================ */
+  var currentTab = "kurz";
+  var audioEl = new Audio();
+  var audioURL = null;
+  var loadedFor = null;
+  var pendingAudio = null;   /* {blob, name, size, type} */
+  var editingId = null;
+
+  function currentQ(){ 
+    for (var i=0;i<DB.questions.length;i++) if (DB.questions[i].id===S.id) return DB.questions[i];
+    return null;
+  }
+
+  function selectQuestion(id){
+    S.id = id;
+    document.body.classList.add("answering");
+    savePref();
+    renderList();
+    renderAnswer();
+    var m = $(".main"); if (m) m.scrollTop = 0;
+  }
+
+  function renderAnswer(){
+    var wrap = $("#answerWrap");
+    wrap.innerHTML = "";
+    var q = currentQ();
+
+    if (!q){
+      var ph = el("div","placeholder");
+      var big = el("span","big","🎧"); ph.appendChild(big);
+      ph.appendChild(document.createTextNode("اختار سؤال من القايمة على الشمال"));
+      wrap.appendChild(ph);
+      return;
+    }
+
+    /* ---- head ---- */
+    var head = el("div","anshead");
+    var qb = el("div","qblock");
+    var qde = el("div","qde", q.q_de || q.q_ar);
+    if (q.q_de) qde.setAttribute("dir","ltr");
+    qb.appendChild(qde);
+    if (q.q_de && q.q_ar) qb.appendChild(el("div","qar", q.q_ar));
+    head.appendChild(qb);
+
+    var acts = el("div","qacts");
+    var bBack = el("button","ibtn", "→"); bBack.title = "رجوع للقايمة";
+    bBack.onclick = function(){ document.body.classList.remove("answering"); };
+    if (window.innerWidth <= 860) acts.appendChild(bBack);
+
+    var bStar = el("button","ibtn" + (S.stars.indexOf(q.id)!==-1?" gold":""), S.stars.indexOf(q.id)!==-1?"★":"☆");
+    bStar.title = "تثبيت";
+    bStar.onclick = function(){
+      var i = S.stars.indexOf(q.id);
+      if (i===-1) S.stars.push(q.id); else S.stars.splice(i,1);
+      savePref(); renderAnswer(); renderList();
+    };
+    acts.appendChild(bStar);
+
+    var bEdit = el("button","ibtn","✏️"); bEdit.title = "تعديل";
+    bEdit.onclick = function(){ openEditor(q.id); };
+    acts.appendChild(bEdit);
+    head.appendChild(acts);
+    wrap.appendChild(head);
+
+    /* ---- player ---- */
+    wrap.appendChild(buildPlayer(q));
+
+    /* ---- tabs ---- */
+    var tabs = el("div","tabs");
+    [["kurz","مختصر · 20 ثانية"],["lang","النص الكامل"],["ar","المعنى بالعربي"]].forEach(function(t){
+      var b = el("button","tab"+(currentTab===t[0]?" on":""), t[1]);
+      b.onclick = function(){ currentTab = t[0]; renderAnswer(); };
+      tabs.appendChild(b);
+    });
+    wrap.appendChild(tabs);
+
+    /* ---- content ---- */
+    var body = el("div","sec" + (S.practice ? " blurred" : ""));
+    var label = currentTab==="ar" ? "المعنى بالعربي" : (currentTab==="lang" ? "النص الكامل" : "الإجابة المختصرة");
+    body.appendChild(el("div","lbl", label));
+
+    var text = currentTab==="ar" ? (q.ar || "—") : (currentTab==="lang" ? (q.lang || q.kurz || "") : (q.kurz || ""));
+    var tx = el("div","txt " + (currentTab==="ar" ? "ar" : "de"), text);
+    if (currentTab!=="ar") tx.setAttribute("dir","ltr");
+    body.appendChild(tx);
+
+    var tools = el("div","row");
+    tools.style.cssText = "display:flex;gap:7px;margin-top:11px;flex-wrap:wrap";
+    var bc = el("button","mini","📋 نسخ"); bc.onclick = function(){ copy(text); };
+    var bs = el("button","mini","🗣️ نطق آلي"); bs.onclick = function(){ tts(text); };
+    tools.appendChild(bc); tools.appendChild(bs);
+    if (q.audio){
+      var ba = el("button","mini","🔊 الصوت المرفوع");
+      ba.onclick = function(){ playAudio(); };
+      tools.appendChild(ba);
+    }
+    body.appendChild(tools);
+
+    if (S.practice){
+      var rv = el("button","reveal","👁️ اكشف الإجابة");
+      rv.onclick = function(){ body.classList.remove("blurred"); rv.remove(); };
+      body.appendChild(rv);
+    }
+    wrap.appendChild(body);
+
+    if (q.draft){
+      wrap.appendChild(el("div","draftbox","⚠️ دي إجابة مسودة — راجعها وعدّلها قبل الإنترفيو."));
+    }
+
+    /* ---- nav ---- */
+    var idx = DB.questions.indexOf(q);
+    var nav = el("div","navrow");
+    var prev = el("button", null, "→ السؤال السابق");
+    prev.disabled = idx<=0;
+    prev.onclick = function(){ if(idx>0) selectQuestion(DB.questions[idx-1].id); };
+    var next = el("button", null, "السؤال التالي ←");
+    next.disabled = idx>=DB.questions.length-1;
+    next.onclick = function(){ if(idx<DB.questions.length-1) selectQuestion(DB.questions[idx+1].id); };
+    nav.appendChild(prev); nav.appendChild(next);
+    wrap.appendChild(nav);
+
+    loadAudioFor(q);
+  }
+
+  /* -------- player widget -------- */
+  function buildPlayer(q){
+    var p = el("div","player");
+
+    var spk = el("button","speaker", q.audio ? "▶" : "🔇");
+    spk.id = "spkBtn";
+    spk.title = q.audio ? "تشغيل صوت الإجابة" : "ارفع صوت الإجابة";
+    spk.onclick = function(){
+      if (q.audio) playAudio();
+      else { editingId = q.id; pendingAudio = null; openEditor(q.id, true); }
+    };
+    p.appendChild(spk);
+
+    var meta = el("div","pl-meta");
+    meta.appendChild(el("b", null, q.audio ? "صوت الإجابة" : "لا يوجد صوت بعد"));
+    meta.appendChild(el("small", null, q.audio
+      ? (q.audio.name + " · " + fmtSize(q.audio.size))
+      : "ارفع ملف الصوت بصوت ألماني واضح"));
+    var bar = el("div","bar"); var fill = el("i"); bar.appendChild(fill);
+    meta.appendChild(bar);
+    p.appendChild(meta);
+
+    var ex = el("div","pl-extra");
+    var up = el("button","mini", q.audio ? "تغيير" : "رفع صوت");
+    up.onclick = function(){ editingId = q.id; pendingAudio = null; openEditor(q.id, true); };
+    ex.appendChild(up);
+    if (q.audio){
+      var del = el("button","mini danger","حذف");
+      del.onclick = function(){
+        if (!confirm("تحذف صوت الإجابة؟")) return;
+        audioEl.pause();
+        A.del(q.id).then(function(){
+          loadedFor = null;
+          q.audio = null; save(); renderList(); renderAnswer(); toast("اتحذف");
+        });
+      };
+      ex.appendChild(del);
+    }
+    p.appendChild(ex);
+
+    setTimeout(function(){
+      if (audioEl && audioEl.duration){
+        fill.style.width = ((audioEl.currentTime/audioEl.duration)*100) + "%";
+      }
+    }, 30);
+
+    return p;
+  }
+
+  function loadAudioFor(q, force){
+    if (!force && loadedFor === q.id) return Promise.resolve(audioEl.src || null);
+    loadedFor = q.id;
+    if (audioURL){ URL.revokeObjectURL(audioURL); audioURL = null; }
+    try { audioEl.pause(); } catch(e){}
+    audioEl.removeAttribute("src");
+    if (!q.audio) return Promise.resolve(null);
+    return A.get(q.id).then(function(blob){
+      if (blob){
+        audioURL = URL.createObjectURL(blob);
+        audioEl.src = audioURL;
+        return audioURL;
+      }
+      if (q.audio.src){ audioEl.src = encodeURI(q.audio.src); return q.audio.src; }
+      return null;
+    }).catch(function(){
+      if (q.audio && q.audio.src){ audioEl.src = encodeURI(q.audio.src); return q.audio.src; }
+      return null;
+    });
+  }
+
+  audioEl.addEventListener("timeupdate", function(){
+    var f = document.querySelector(".player .bar > i");
+    if (!f || !audioEl.duration) return;
+    f.style.width = ((audioEl.currentTime/audioEl.duration)*100).toFixed(1) + "%";
+  });
+  audioEl.addEventListener("play", function(){
+    var s = $("#spkBtn"); if (s){ s.textContent = "⏸"; s.classList.add("playing"); }
+  });
+  audioEl.addEventListener("pause", function(){
+    var s = $("#spkBtn"); if (s){ s.textContent = "▶"; s.classList.remove("playing"); }
+  });
+  audioEl.addEventListener("ended", function(){
+    var s = $("#spkBtn"); if (s){ s.textContent = "▶"; s.classList.remove("playing"); }
+    var f = document.querySelector(".player .bar > i"); if (f) f.style.width = "0%";
+  });
+
+  function playAudio(){
+    var q = currentQ();
+    if (!q || !q.audio) return;
+    if (!audioEl.src) {
+      loadAudioFor(q, true).then(function(){
+        if (audioEl.src) audioEl.play().catch(function(){ toast("اضغط تاني للتشغيل"); });
+      });
+      return;
+    }
+    if (audioEl.paused) audioEl.play().catch(function(){ toast("اضغط تاني للتشغيل"); });
+    else { try { audioEl.pause(); } catch(e){} }
+  }
+
+  /* ============================================================
+     EDITOR
+     ============================================================ */
+  function fillCats(sel){
+    sel.innerHTML = "";
+    CATS.forEach(function(c){
+      var o = el("option", null, c.label); o.value = c.id; sel.appendChild(o);
+    });
+  }
+  fillCats($("#f_cat"));
+
+  function openEditor(id, focusAudio){
+    editingId = id || null;
+    var q = id ? DB.questions.filter(function(x){ return x.id===id; })[0] : null;
+    $("#modalTitle").textContent = q ? "تعديل السؤال" : "سؤال جديد";
+    $("#deleteBtn").classList.toggle("hidden", !q);
+
+    $("#f_qar").value  = q ? (q.q_ar||"") : "";
+    $("#f_qde").value  = q ? (q.q_de||"") : "";
+    $("#f_kurz").value = q ? (q.kurz||"") : "";
+    $("#f_lang").value = q ? (q.lang||"") : "";
+    $("#f_ar").value   = q ? (q.ar||"")   : "";
+    $("#f_cat").value  = q ? (q.cat||CATS[0].id) : CATS[0].id;
+    $("#f_hot").checked   = q ? !!q.hot : false;
+    $("#f_draft").checked = q ? !!q.draft : true;
+    $("#audioName").textContent = q && q.audio
+      ? (q.audio.name + " · " + fmtSize(q.audio.size))
+      : "لا يوجد صوت — ارفع ملف MP3 / M4A / WAV";
+
+    pendingAudio = null;
+    showModal();
+    setTimeout(function(){
+      if (focusAudio) $("#pickAudio").focus();
+      else $("#f_qar").focus();
+    }, 60);
+  }
+
+  function showModal(){
+    $("#overlay").classList.remove("hidden");
+    $("#modal").classList.remove("hidden");
+  }
+  function hideModal(){
+    $("#overlay").classList.add("hidden");
+    $("#modal").classList.add("hidden");
+  }
+  $("#modalClose").onclick = hideModal;
+  $("#cancelBtn").onclick = hideModal;
+  $("#overlay").onclick = hideModal;
+
+  $("#addBtn").onclick = function(){ openEditor(null); };
+  $("#pickAudio").onclick = function(){ $("#audioInput").click(); };
+  $("#audioInput").onchange = function(e){
+    var f = e.target.files[0];
+    if (!f) return;
+    if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|wav|ogg|aac|webm)$/i.test(f.name)){
+      toast("اختار ملف صوت"); return;
+    }
+    pendingAudio = f;
+    $("#audioName").textContent = f.name + " · " + fmtSize(f.size) + " (لسه محفوظ)";
+    e.target.value = "";
+  };
+  $("#testAudio").onclick = function(){
+    if (pendingAudio){
+      var u = URL.createObjectURL(pendingAudio);
+      var a = new Audio(u); a.play(); a.onended = function(){ URL.revokeObjectURL(u); };
+      return;
+    }
+    var q = editingId ? DB.questions.filter(function(x){ return x.id===editingId; })[0] : null;
+    if (q && q.audio){ playAudio(); return; }
+    toast("مفيش صوت مرفوع");
+  };
+  $("#removeAudio").onclick = function(){
+    pendingAudio = null;
+    var q = editingId ? DB.questions.filter(function(x){ return x.id===editingId; })[0] : null;
+    if (q && q.audio){
+      if (!confirm("تحذف الصوت المحفوظ؟")) return;
+      q.audio = null; save(); A.del(q.id); loadedFor = null;
+      renderList(); renderAnswer();
+    }
+    $("#audioName").textContent = "لا يوجد صوت — ارفع ملف MP3 / M4A / WAV";
+    toast("اتحذف");
+  };
+
+  $("#saveBtn").onclick = function(){
+    var qar = $("#f_qar").value.trim();
+    var qde = $("#f_qde").value.trim();
+    var kurz = $("#f_kurz").value.trim();
+    if (!qar && !qde) return toast("اكتب اسم السؤال");
+    if (!kurz) return toast("اكتب الإجابة المختصرة");
+
+    var data = {
+      q_ar: qar, q_de: qde, kurz: kurz,
+      lang: $("#f_lang").value.trim(),
+      ar:   $("#f_ar").value.trim(),
+      cat:  $("#f_cat").value,
+      hot:  $("#f_hot").checked,
+      draft:$("#f_draft").checked
+    };
+
+    var q;
+    if (editingId){
+      q = DB.questions.filter(function(x){ return x.id===editingId; })[0];
+      if (!q) return;
+      Object.keys(data).forEach(function(k){ q[k] = data[k]; });
+    } else {
+      q = data;
+      q.id = "q" + Date.now().toString(36);
+      q.tags = [];
+      q.audio = null;
+      DB.questions.push(q);
+      S.id = q.id;
+    }
+
+    var finish = function(){
+      loadedFor = null;
+      save(); hideModal(); renderList(); renderAnswer();
+      toast("اتحفظ ✓");
+    };
+
+    if (pendingAudio){
+      q.audio = { name: pendingAudio.name, size: pendingAudio.size, type: pendingAudio.type || "audio/mpeg" };
+      A.put(q.id, pendingAudio).then(finish).catch(function(){
+        q.audio = null; toast("الصوت كبير جدًا — جرّب ملف أصغر"); save(); hideModal(); renderList(); renderAnswer();
+      });
+    } else finish();
+  };
+
+  $("#deleteBtn").onclick = function(){
+    if (!editingId) return;
+    if (!confirm("تحذف السؤال ده نهائيًا؟")) return;
+    A.del(editingId);
+    DB.questions = DB.questions.filter(function(x){ return x.id !== editingId; });
+    if (S.id === editingId) S.id = DB.questions[0] ? DB.questions[0].id : null;
+    save(); hideModal(); renderList(); renderAnswer(); toast("اتحذف");
+  };
+
+  $("#moveUp").onclick = function(){ move(-1); };
+  $("#moveDown").onclick = function(){ move(1); };
+  function move(dir){
+    if (!editingId) return;
+    var i = DB.questions.map(function(x){ return x.id; }).indexOf(editingId);
+    var j = i + dir;
+    if (i<0 || j<0 || j>=DB.questions.length) return;
+    var tmp = DB.questions[i]; DB.questions[i] = DB.questions[j]; DB.questions[j] = tmp;
+    save(); renderList(); renderAnswer(); toast("اتحرك");
+  }
+
+  /* ============================================================
+     PHRASES
+     ============================================================ */
+  var GROUPS = { voice:"الصوت والاتصال", time:"كسب وقت / تفكير", clarify:"توضيح السؤال", polite:"لباقة وختام" };
+  $("#sosBtn").onclick = function(){
+    var b = $("#pBody"); b.innerHTML = "";
+    Object.keys(GROUPS).forEach(function(g){
+      var list = DB.phrases.filter(function(p){ return p.cat===g; });
+      if (!list.length) return;
+      b.appendChild(el("div","pgroup", GROUPS[g]));
+      list.forEach(function(p){
+        var row = el("div","prow");
+        var de = el("div","de", p.de); de.setAttribute("dir","ltr");
+        de.onclick = function(){ tts(p.de); };
+        row.appendChild(de);
+        row.appendChild(el("div","ar", p.ar));
+        var pr = el("div","pr");
+        var c = el("button","mini","📋 نسخ"); c.onclick = function(){ copy(p.de); };
+        var s = el("button","mini","🔊 اقرأ"); s.onclick = function(){ tts(p.de); };
+        pr.appendChild(c); pr.appendChild(s);
+        row.appendChild(pr);
+        b.appendChild(row);
+      });
+    });
+    $("#phrases").classList.remove("hidden");
+    $("#pBody").scrollTop = 0;
+  };
+  $("#phBack").onclick = function(){ $("#phrases").classList.add("hidden"); };
+
+  /* ============================================================
+     BACKUP / RESTORE
+     ============================================================ */
+  $("#backupBtn").onclick = function(){
+    var withAudio = confirm("تحب تضمّن ملفات الصوت في النسخة الاحتياطية؟\n(هتخلي الملف أكبر، لكن يبقى نسخة كاملة)");
+    var out = { app:"Interview Copilot", v:3, exportedAt:new Date().toISOString(),
+                questions: JSON.parse(JSON.stringify(DB.questions)), phrases: DB.phrases, meta: DB.meta,
+                audio: {} };
+    if (withAudio){
+      var withA = DB.questions.filter(function(q){ return q.audio; });
+      Promise.all(withA.map(function(q){
+        return A.get(q.id).then(function(blob){
+          if (!blob) return;
+          return new Promise(function(res){
+            var fr = new FileReader();
+            fr.onload = function(){ out.audio[q.id] = { name:q.audio.name, type:q.audio.type, data:fr.result }; res(); };
+            fr.readAsDataURL(blob);
+          });
+        }).catch(function(){});
+      })).then(function(){ download(out); });
+    } else download(out);
+
+    function download(obj){
+      var blob = new Blob([JSON.stringify(obj)], { type:"application/json" });
+      var a = el("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "interview-copilot-" + new Date().toISOString().slice(0,10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 3000);
+      toast("النسخة اتنزلت ✓");
+    }
+  };
+
+  $("#importBtn").onclick = function(){ $("#importInput").click(); };
+  $("#importInput").onchange = function(e){
+    var f = e.target.files[0]; if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      try{
+        var d = JSON.parse(fr.result);
+        if (!d || !d.questions) throw 0;
+        if (!confirm("هيتم استبدال البيانات الحالية بـ " + d.questions.length + " سؤال. تكمل؟")) return;
+        DB = { v:3, questions:d.questions, phrases:d.phrases||DB.phrases, meta:d.meta||DB.meta };
+        DB.questions.forEach(function(q){ q.audio = q.audio || null; if(!q.tags) q.tags=[]; });
+        save();
+        var tasks = Object.keys(d.audio||{}).map(function(id){
+          return fetch(d.audio[id].data).then(function(r){ return r.blob(); })
+            .then(function(b){ return A.put(id, b); }).catch(function(){});
+        });
+        Promise.all(tasks).then(function(){
+          loadedFor = null;
+          S.id = DB.questions[0] ? DB.questions[0].id : null;
+          renderFilters(); renderList(); renderAnswer();
+          toast("اتحمّلت ✓");
+        });
+      }catch(err){ toast("الملف مش صالح"); }
+    };
+    fr.readAsText(f);
+    e.target.value = "";
+  };
+
+  /* ============================================================
+     PREF BTNS
+     ============================================================ */
+  $("#fontUp").onclick   = function(){ if (S.fs<28){ S.fs++; applyFs(); savePref(); } };
+  $("#fontDown").onclick = function(){ if (S.fs>13){ S.fs--; applyFs(); savePref(); } };
+  $("#practiceBtn").onclick = function(){
+    S.practice = !S.practice; savePref();
+    $("#practiceBtn").classList.toggle("on", S.practice);
+    renderAnswer();
+  };
+  $("#practiceBtn").classList.toggle("on", S.practice);
+
+  $("#search").addEventListener("input", function(e){
+    S.q = e.target.value;
+    renderList();
+  });
+
+  /* ============================================================
+     KEYS
+     ============================================================ */
+  document.addEventListener("keydown", function(e){
+    var tag = (e.target.tagName||"").toLowerCase();
+    if (tag==="input"||tag==="textarea"||tag==="select"){
+      if (e.key==="Escape") e.target.blur();
+      return;
+    }
+    if (e.key==="/"){ e.preventDefault(); $("#search").focus(); }
+    if (e.key==="Escape"){
+      if (!$("#modal").classList.contains("hidden")) return hideModal();
+      if (!$("#phrases").classList.contains("hidden")) return $("#phrases").classList.add("hidden");
+      document.body.classList.remove("answering");
+    }
+    if (e.key==="ArrowDown" || e.key==="ArrowUp"){
+      var idx = DB.questions.map(function(x){ return x.id; }).indexOf(S.id);
+      if (idx<0) idx = 0;
+      var n = e.key==="ArrowDown" ? Math.min(idx+1, DB.questions.length-1) : Math.max(idx-1, 0);
+      if (DB.questions[n]) selectQuestion(DB.questions[n].id);
+    }
+  });
+
+  /* ============================================================
+     BOOT
+     ============================================================ */
+  $("#sub").textContent = DB.questions.length + " سؤال · " + DB.phrases.length + " جملة إنقاذ";
+  renderFilters();
+  renderList();
+
+  var firstId = null;
+  try{ firstId = JSON.parse(localStorage.getItem(PREF) || "{}").last; }catch(e){}
+  if (!firstId || !DB.questions.some(function(x){ return x.id === firstId; })){
+    firstId = DB.questions[0] ? DB.questions[0].id : null;
+  }
+  if (firstId){
+    selectQuestion(firstId);
+    if (window.innerWidth <= 860) document.body.classList.remove("answering");
+  } else {
+    renderAnswer();
+  }
+
+  if ("speechSynthesis" in window){
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = function(){ window.speechSynthesis.getVoices(); };
+  }
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+  window.addEventListener("beforeunload", function(){ if (audioURL) URL.revokeObjectURL(audioURL); });
+})();
+</script>
+</body>
+</html>
