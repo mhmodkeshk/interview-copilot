@@ -16,6 +16,10 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
+  /* على الموبايل: ارتفاع الشاشة الحقيقي (من غير شريط العنوان) */
+  @supports (height:100dvh){
+    html,body{height:100dvh}
+  }
   body{
     margin:0;background:var(--bg);color:var(--txt);
     font-family:"Segoe UI",system-ui,-apple-system,Tahoma,"Noto Naskh Arabic",sans-serif;
@@ -60,6 +64,10 @@
   .side{grid-column:1;grid-row:1}
   .main{grid-column:2;grid-row:1}
   .side,.main{direction:rtl}
+  /* منع أي محتوى داخلي (زي شريط الفلاتر) إنه يوسّع الصفحة ويقطع الباقي */
+  .body,.side,.main,.side-tools,.filters,.qlist,.qgrid,.side-foot,.frame,.answrap{
+    min-width:0;max-width:100%
+  }
 
   /* ---------------- sidebar ---------------- */
   .side{
