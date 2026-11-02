@@ -404,8 +404,23 @@
     body.answering .side{display:none}
     body.answering .main{display:flex}
     .answrap{padding:14px 14px 26px}
-    .qgrid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
-    .tile{font-size:11.5px;padding:12px 6px}
+    /* 4 مربعات في الصف + تصغير تلقائي عشان كله يبان من غير سكرول */
+    .qlist{overflow:hidden}
+    .qgrid{
+      grid-template-columns:repeat(4,1fr);
+      grid-auto-rows:1fr;gap:8px;justify-content:center;align-content:start
+    }
+    .tile{font-size:10.5px;padding:7px 5px}
+    .tile .de{
+      font-size:var(--tfs,9.5px);line-height:1.2;
+      -webkit-line-clamp:3
+    }
+    .tile .ar{
+      font-size:var(--tfs-ar,8px);line-height:1.2;
+      -webkit-line-clamp:2;margin-top:2px
+    }
+    .tile .num{font-size:8px;top:3px;inset-inline-start:5px}
+    .tile .spk{font-size:9px;top:2px;inset-inline-end:5px}
     .qblock .qde{font-size:18.5px}
     .two{grid-template-columns:1fr}
     .player{padding:11px}
@@ -798,6 +813,56 @@
     if (act && act.scrollIntoView){
       try { act.scrollIntoView({block:"nearest"}); } catch(e){}
     }
+    queueFit();
+  }
+
+  function queueFit(){
+    if (window.requestAnimationFrame) window.requestAnimationFrame(fitTiles);
+    else setTimeout(fitTiles, 16);
+  }
+
+  /* على الموبايل: 4 في الصف، والمربعات بتصغر تلقائيًا عشان مفيش سكرول */
+  function fitTiles(){
+    var list = $("#qlist");
+    if (!list) return;
+    var grid = list.querySelector(".qgrid");
+    if (!grid) return;
+
+    if (window.innerWidth > 860){
+      grid.style.gridTemplateColumns = "";
+      grid.style.gridAutoRows = "";
+      grid.style.justifyContent = "";
+      list.style.overflowY = "";
+      return;
+    }
+    if (list.clientHeight < 60) return; /* القايمة مخفية (شاشة الإجابة) */
+
+    var items = grid.children.length;
+    if (!items) return;
+
+    var gap = 8, cols = 4;
+    var rows = Math.ceil(items / cols);
+    var cs = getComputedStyle(list);
+    var availW = list.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+    var availH = list.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+
+    var size = Math.floor(Math.min(
+      (availW - gap * (cols - 1)) / cols,
+      (availH - gap * (rows - 1)) / rows
+    ));
+    if (!isFinite(size) || size <= 0) return;
+
+    var scroll = size < 50;
+    if (scroll) size = 50;
+
+    grid.style.gridTemplateColumns = "repeat(" + cols + ", " + size + "px)";
+    grid.style.gridAutoRows = size + "px";
+    grid.style.justifyContent = "center";
+    list.style.overflowY = scroll ? "auto" : "hidden";
+
+    var fs = Math.max(8.5, Math.min(12.5, size * 0.118));
+    grid.style.setProperty("--tfs", fs.toFixed(1) + "px");
+    grid.style.setProperty("--tfs-ar", Math.max(7, fs * 0.78).toFixed(1) + "px");
   }
 
   /* ============================================================
@@ -848,7 +913,7 @@
 
     var acts = el("div","qacts");
     var bBack = el("button","ibtn", "→"); bBack.title = "رجوع للقايمة";
-    bBack.onclick = function(){ document.body.classList.remove("answering"); };
+    bBack.onclick = function(){ document.body.classList.remove("answering"); setTimeout(fitTiles, 40); };
     if (window.innerWidth <= 860) acts.appendChild(bBack);
 
     var bStar = el("button","ibtn" + (S.stars.indexOf(q.id)!==-1?" gold":""), S.stars.indexOf(q.id)!==-1?"★":"☆");
@@ -1317,9 +1382,20 @@
   if (firstId){
     selectQuestion(firstId);
     if (window.innerWidth <= 860) document.body.classList.remove("answering");
+    setTimeout(fitTiles, 60);
   } else {
     renderAnswer();
   }
+
+  var fitTimer = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitTiles, 80);
+  });
+  window.addEventListener("orientationchange", function(){
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitTiles, 250);
+  });
 
   if ("speechSynthesis" in window){
     window.speechSynthesis.getVoices();
