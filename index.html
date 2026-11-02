@@ -194,7 +194,7 @@
   .tab.on{background:rgba(45,212,167,.13);border-color:rgba(45,212,167,.45);color:var(--acc)}
 
   .txt{font-size:var(--fs);line-height:1.85;white-space:pre-wrap;word-wrap:break-word}
-  .txt.de{direction:ltr;text-align:left;line-height:1.8}
+  .txt.de{text-align:start;line-height:1.8}
   .txt.ar{color:#cfdfee;line-height:2}
   .sec{margin-bottom:10px}
   .lbl{
@@ -503,14 +503,9 @@
       </div>
 
       <div class="field">
-        <label>الإجابة المختصرة (اللي هتقرأها في المكالمة)</label>
-        <textarea id="f_kurz" rows="5" dir="auto"></textarea>
-        <div class="hint">خليها 3–5 جمل عشان تقدر تقراها بسرعة.</div>
-      </div>
-
-      <div class="field">
-        <label>النص الكامل (اختياري)</label>
-        <textarea id="f_lang" rows="5" dir="auto"></textarea>
+        <label>الإجابة</label>
+        <textarea id="f_lang" rows="9" dir="auto"></textarea>
+        <div class="hint">النص اللي هتقرأه في المكالمة.</div>
       </div>
 
       <div class="field">
@@ -782,7 +777,7 @@
       if (S.filter === "star" && S.stars.indexOf(q.id) === -1) return false;
       if (S.filter !== "all" && S.filter !== "star" && q.cat !== S.filter) return false;
       if (!terms.length) return true;
-      var h = norm([q.q_ar,q.q_de,q.kurz,q.ar,(q.tags||[]).join(" ")].join(" "));
+      var h = norm([q.q_ar,q.q_de,q.kurz,q.lang,q.ar,(q.tags||[]).join(" ")].join(" "));
       return terms.every(function(t){ return h.indexOf(t) !== -1; });
     });
 
@@ -868,7 +863,7 @@
   /* ============================================================
      ANSWER PANEL
      ============================================================ */
-  var currentTab = "kurz";
+  var currentTab = "lang";
   var audioEl = new Audio();
   var audioURL = null;
   var loadedFor = null;
@@ -936,7 +931,7 @@
 
     /* ---- tabs ---- */
     var tabs = el("div","tabs");
-    [["kurz","مختصر · 20 ثانية"],["lang","النص الكامل"],["ar","المعنى بالعربي"]].forEach(function(t){
+    [["lang","الإجابة"],["ar","المعنى بالعربي"]].forEach(function(t){
       var b = el("button","tab"+(currentTab===t[0]?" on":""), t[1]);
       b.onclick = function(){ currentTab = t[0]; renderAnswer(); };
       tabs.appendChild(b);
@@ -945,12 +940,12 @@
 
     /* ---- content ---- */
     var body = el("div","sec" + (S.practice ? " blurred" : ""));
-    var label = currentTab==="ar" ? "المعنى بالعربي" : (currentTab==="lang" ? "النص الكامل" : "الإجابة المختصرة");
+    var label = currentTab==="ar" ? "المعنى بالعربي" : "الإجابة";
     body.appendChild(el("div","lbl", label));
 
-    var text = currentTab==="ar" ? (q.ar || "—") : (currentTab==="lang" ? (q.lang || q.kurz || "") : (q.kurz || ""));
+    var text = currentTab==="ar" ? (q.ar || "—") : (q.lang || q.kurz || "");
     var tx = el("div","txt " + (currentTab==="ar" ? "ar" : "de"), text);
-    if (currentTab!=="ar") tx.setAttribute("dir","ltr");
+    if (currentTab!=="ar") tx.setAttribute("dir","auto");
     body.appendChild(tx);
 
     var tools = el("div","row");
@@ -1109,8 +1104,7 @@
 
     $("#f_qar").value  = q ? (q.q_ar||"") : "";
     $("#f_qde").value  = q ? (q.q_de||"") : "";
-    $("#f_kurz").value = q ? (q.kurz||"") : "";
-    $("#f_lang").value = q ? (q.lang||"") : "";
+    $("#f_lang").value = q ? (q.lang || q.kurz || "") : "";
     $("#f_ar").value   = q ? (q.ar||"")   : "";
     $("#f_cat").value  = q ? (q.cat||CATS[0].id) : CATS[0].id;
     $("#f_hot").checked   = q ? !!q.hot : false;
@@ -1176,13 +1170,13 @@
   $("#saveBtn").onclick = function(){
     var qar = $("#f_qar").value.trim();
     var qde = $("#f_qde").value.trim();
-    var kurz = $("#f_kurz").value.trim();
+    var answer = $("#f_lang").value.trim();
     if (!qar && !qde) return toast("اكتب اسم السؤال");
-    if (!kurz) return toast("اكتب الإجابة المختصرة");
+    if (!answer) return toast("اكتب الإجابة");
 
     var data = {
-      q_ar: qar, q_de: qde, kurz: kurz,
-      lang: $("#f_lang").value.trim(),
+      q_ar: qar, q_de: qde,
+      lang: answer,
       ar:   $("#f_ar").value.trim(),
       cat:  $("#f_cat").value,
       hot:  $("#f_hot").checked,
