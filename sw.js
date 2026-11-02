@@ -1,6 +1,6 @@
-const CACHE = 'interview-copilot-v3';
+const CACHE = 'interview-copilot-v4';
 const ASSETS = ['./index.html', './manifest.webmanifest', './icon.svg'];
-const AUDIO = ['./WhatsApp Audio 2026-10-23 at 11.31.53 PM.mpeg'];
+const AUDIO = ['./demo-vorstellung.mp3'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
